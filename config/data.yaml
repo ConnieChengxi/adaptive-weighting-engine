@@ -1,0 +1,11 @@
+downloads:
+  etf_field: auto_adjusted_ohlcv
+  benchmark_field: auto_adjusted_ohlcv
+  vix_symbol: "^VIX"
+  output_dir: data/raw
+
+sources:
+  prices: yfinance
+  benchmark: yfinance
+  vix: yfinance
+  rates: fred_optional

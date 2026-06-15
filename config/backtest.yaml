@@ -1,0 +1,18 @@
+portfolio:
+  top_n: 3
+  weighting: equal_within_selected
+  rebalance_frequency: monthly
+
+costs:
+  transaction_cost_bps: 10
+
+evaluation:
+  benchmark: SPY
+  metrics:
+    - annualized_return
+    - annualized_volatility
+    - sharpe_ratio
+    - max_drawdown
+    - calmar_ratio
+    - turnover
+    - net_return_after_costs

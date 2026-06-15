@@ -1,0 +1,21 @@
+project:
+  name: adaptive-weighting-engine
+  frequency: monthly
+  start_date: "2010-01-01"
+  end_date: "2024-12-31"
+
+universe:
+  etfs:
+    - XLK
+    - XLF
+    - XLE
+    - XLV
+    - XLY
+    - XLI
+    - XLU
+    - XLP
+    - XLB
+  benchmark: SPY
+  optional_etfs:
+    - XLRE
+    - XLC

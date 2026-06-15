@@ -1,0 +1,7 @@
+transaction_cost_bps,fixed_weight_net_annualized_return,xgboost_ic_net_annualized_return,xgboost_ic_minus_fixed_weight
+0,12.76%,12.92%,0.16%
+4,12.51%,12.54%,0.02%
+5,12.45%,12.44%,-0.01%
+10,12.15%,11.97%,-0.18%
+25,11.23%,10.55%,-0.68%
+50,9.72%,8.22%,-1.50%

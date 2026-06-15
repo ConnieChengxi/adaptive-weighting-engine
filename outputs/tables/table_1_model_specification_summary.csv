@@ -1,0 +1,5 @@
+model_name,weighting_logic,adaptive_or_not,ml_or_not,shrinkage_rule
+Model 0,Equal-weight benchmark across selected ETF universe,No,No,Not applicable
+Model 1,"Fixed multi-factor weights: Momentum 0.35, Liquidity 0.15, Downside Risk 0.25, Volatility 0.25",No,No,Not applicable
+Model 2,Rolling Information Coefficient weighting,Yes,No,80/20 shrinkage toward fixed-weight baseline
+Model 3,XGBoost-predicted factor IC weighting,Yes,Yes,80/20 shrinkage toward fixed-weight baseline

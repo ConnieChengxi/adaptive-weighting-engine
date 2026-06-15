@@ -1,0 +1,13 @@
+factors:
+  momentum:
+    windows_months: [3, 6]
+  liquidity:
+    window_days: 21
+  downside_risk:
+    window_days: 126
+  volatility:
+    window_days: 63
+
+standardization:
+  method: cross_sectional_zscore
+  rebalance_frequency: monthly

@@ -1,0 +1,19 @@
+model:
+  name: rolling_ic
+  ic_method: spearman_rank
+  lookback_months: 12
+  negative_ic_weight: 0.0
+  fallback: fixed_weight_baseline
+  shrinkage:
+    enabled: true
+    ic_weight: 0.8
+    baseline_weight: 0.2
+  robustness:
+    no_shrinkage:
+      enabled: false
+      ic_weight: 1.0
+      baseline_weight: 0.0
+    shrinkage_60_40:
+      enabled: false
+      ic_weight: 0.6
+      baseline_weight: 0.4

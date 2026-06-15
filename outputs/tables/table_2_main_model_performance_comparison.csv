@@ -1,0 +1,4 @@
+model,annualized_return,annualized_volatility,sharpe_ratio,max_drawdown,calmar_ratio,turnover,net_return_after_costs
+Fixed-weight model,12.76%,12.34%,1.034,-15.19%,0.840,46.05%,12.15%
+Rolling IC model,11.37%,12.44%,0.914,-21.42%,0.531,50.29%,10.71%
+XGBoost IC model,12.92%,13.20%,0.979,-15.34%,0.842,71.48%,11.97%

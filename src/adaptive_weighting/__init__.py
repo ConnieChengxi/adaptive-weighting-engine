@@ -1,0 +1,1 @@
+"""Adaptive weighting research package."""
