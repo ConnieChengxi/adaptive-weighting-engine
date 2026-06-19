@@ -25,6 +25,7 @@ TABLES_DIR = ROOT / "outputs" / "tables"
 ARCHIVE_DIR = ROOT / "outputs" / "archive_legacy_assets"
 
 MODEL_LABELS = {
+    "equal_weight_benchmark": "Equal-weight benchmark",
     "fixed_weight": "Fixed-weight model",
     "rolling_ic_80_20": "Rolling IC model",
     "xgboost_ic": "XGBoost IC model",
@@ -33,6 +34,7 @@ MODEL_LABELS = {
 }
 
 MODEL_COLORS = {
+    "equal_weight_benchmark": "#6d597a",
     "fixed_weight": "#264653",
     "rolling_ic_80_20": "#e76f51",
     "xgboost_ic": "#2a9d8f",
@@ -146,6 +148,9 @@ def save_table_1_model_specification() -> None:
 
 def save_table_2_main_comparison() -> None:
     table = load_csv("full_model_comparison_metrics.csv")
+    ordered = ["equal_weight_benchmark", "fixed_weight", "rolling_ic_80_20", "xgboost_ic"]
+    table["model"] = pd.Categorical(table["model"], categories=ordered, ordered=True)
+    table = table.sort_values("model").copy()
     table["model"] = table["model"].map(MODEL_LABELS)
     table = format_metric_tables(table)
     table.to_csv(TABLES_DIR / "table_2_main_model_performance_comparison.csv", index=False)
@@ -298,6 +303,7 @@ def make_figure_d3b_vix_stress_regime_distribution() -> None:
 def make_figure_1_cumulative_wealth() -> None:
     plt.figure(figsize=(11, 6.5))
     for file_name, model_key in [
+        ("equal_weight_benchmark_portfolio_returns.csv", "equal_weight_benchmark"),
         ("fixed_weight_portfolio_returns.csv", "fixed_weight"),
         ("rolling_ic_portfolio_returns.csv", "rolling_ic_80_20"),
         ("xgboost_ic_portfolio_returns.csv", "xgboost_ic"),
@@ -390,6 +396,9 @@ def make_figure_3_xgboost_concentration() -> None:
 
 def make_figure_4_gross_vs_net_returns() -> None:
     main = load_csv("full_model_comparison_metrics.csv")
+    ordered = ["equal_weight_benchmark", "fixed_weight", "rolling_ic_80_20", "xgboost_ic"]
+    main["model"] = pd.Categorical(main["model"], categories=ordered, ordered=True)
+    main = main.sort_values("model").copy()
     plot_frame = main[["model", "annualized_return", "net_return_after_costs"]].copy()
     plot_frame["model"] = plot_frame["model"].map(MODEL_LABELS)
     plot_frame = plot_frame.melt(id_vars="model", var_name="return_type", value_name="value")
@@ -492,7 +501,7 @@ Tables generated:
 - Table 4: Transaction cost sensitivity summary
 
 Figures generated:
-- Figure 1: Cumulative portfolio wealth by weighting model
+- Figure 1: Cumulative portfolio wealth across the benchmark and adaptive models
 - Figure 2: Factor weight evolution under the Rolling IC model
 - Figure 3: Factor weight concentration under the XGBoost IC model
 - Figure 4: Gross versus net annualized returns

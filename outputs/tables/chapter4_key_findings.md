@@ -7,7 +7,7 @@ Tables generated:
 - Table 4: Transaction cost sensitivity summary
 
 Figures generated:
-- Figure 1: Cumulative portfolio wealth by weighting model
+- Figure 1: Cumulative portfolio wealth across the benchmark and adaptive models
 - Figure 2: Factor weight evolution under the Rolling IC model
 - Figure 3: Factor weight concentration under the XGBoost IC model
 - Figure 4: Gross versus net annualized returns

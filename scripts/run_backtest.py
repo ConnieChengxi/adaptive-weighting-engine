@@ -69,6 +69,14 @@ def build_portfolio_returns(selection: pd.DataFrame) -> pd.DataFrame:
     return portfolio
 
 
+def build_equal_weight_benchmark_panel(tradable: pd.DataFrame) -> pd.DataFrame:
+    benchmark = tradable.copy()
+    counts = benchmark.groupby("Date")["symbol"].transform("count")
+    benchmark["portfolio_weight"] = 1.0 / counts
+    benchmark["weighted_return"] = benchmark["portfolio_weight"] * benchmark["next_month_return"]
+    return benchmark
+
+
 def prepare_scored_panel(panel: pd.DataFrame, factor_weights: dict[str, float]) -> pd.DataFrame:
     scored = build_fixed_weight_score(panel, factor_weights)
     return scored
@@ -152,6 +160,24 @@ def run_model_backtest(
     selected = select_top_n_by_score(tradable, score_column, top_n)
     selected["weighted_return"] = selected["portfolio_weight"] * selected["next_month_return"]
 
+    portfolio_returns = build_portfolio_returns(selected)
+    turnover = compute_turnover(selected)
+    portfolio_returns = portfolio_returns.merge(turnover, on="Date", how="left")
+
+    metrics = summarize_performance(
+        portfolio_returns["portfolio_return"],
+        portfolio_returns["turnover"],
+        transaction_cost_bps=transaction_cost_bps,
+    )
+    metrics_frame = pd.DataFrame([metrics])
+    return selected, portfolio_returns, metrics_frame
+
+
+def run_equal_weight_backtest(
+    tradable: pd.DataFrame,
+    transaction_cost_bps: float,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    selected = build_equal_weight_benchmark_panel(tradable)
     portfolio_returns = build_portfolio_returns(selected)
     turnover = compute_turnover(selected)
     portfolio_returns = portfolio_returns.merge(turnover, on="Date", how="left")
@@ -313,6 +339,17 @@ def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     fixed_weight_tradable = build_tradable_panel(scored)
+    equal_weight_selected, equal_weight_portfolio_returns, equal_weight_metrics = run_equal_weight_backtest(
+        fixed_weight_tradable,
+        transaction_cost_bps=transaction_cost_bps,
+    )
+    save_backtest_outputs(
+        "equal_weight_benchmark",
+        equal_weight_selected,
+        equal_weight_portfolio_returns,
+        equal_weight_metrics,
+    )
+
     fixed_selected, fixed_portfolio_returns, fixed_metrics = run_model_backtest(
         fixed_weight_tradable,
         score_column="fixed_weight_score",
@@ -341,6 +378,7 @@ def main() -> None:
 
     save_model_comparison(
         {
+            "equal_weight_benchmark": equal_weight_metrics,
             "fixed_weight": fixed_metrics,
             "rolling_ic": rolling_metrics_by_model["rolling_ic"],
         },
@@ -348,6 +386,7 @@ def main() -> None:
     )
     save_model_comparison(
         {
+            "equal_weight_benchmark": equal_weight_metrics,
             "fixed_weight": fixed_metrics,
             "rolling_ic_80_20": rolling_metrics_by_model["rolling_ic"],
             "rolling_ic_no_shrinkage": rolling_metrics_by_model["rolling_ic_no_shrinkage"],
@@ -407,6 +446,7 @@ def main() -> None:
 
     save_model_comparison(
         {
+            "equal_weight_benchmark": equal_weight_metrics,
             "fixed_weight": fixed_metrics,
             "rolling_ic_80_20": rolling_metrics_by_model["rolling_ic"],
             "xgboost_ic": xgboost_metrics,
