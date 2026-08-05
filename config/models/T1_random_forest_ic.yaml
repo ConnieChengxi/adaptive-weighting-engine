@@ -1,0 +1,35 @@
+model:
+  code: T1
+  name: random_forest_ic
+  target: next_period_factor_ic
+  ic_method: spearman_rank
+  retrain_frequency: monthly
+  training_window_months: 36
+  min_training_rows: 24
+  negative_prediction_weight: 0.0
+  fallback: neutral_prior
+  prior_weights:
+    momentum_score_z: 0.3333333333
+    liquidity_1m_z: 0.3333333333
+    volatility_score_z: 0.3333333333
+  shrinkage:
+    enabled: true
+    ic_weight: 0.5
+    baseline_weight: 0.5
+  turnover_adjustment:
+    enabled: true
+    framework: PTA
+    lambda: 0.05
+  features:
+    include_market_features: true
+    ic_lag_months: [1, 2, 3]
+    ic_rolling_means: [3, 6]
+  estimator:
+    family: tree_ensemble
+    type: random_forest
+    n_estimators: 300
+    max_depth: 3
+    min_samples_leaf: 5
+    max_features: sqrt
+    random_state: 42
+  description: Nonlinear tree ensemble IC prediction model using Random Forest

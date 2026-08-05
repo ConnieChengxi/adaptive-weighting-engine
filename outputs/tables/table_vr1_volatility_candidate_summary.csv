@@ -1,0 +1,13 @@
+Factor,Sample,Number of months,Mean IC,Median IC,IC standard deviation,Share of positive IC months
+Low EWMA volatility,Overall,267,-0.0063,0.0000,0.4534,49.81%
+Low EWMA volatility,Normal VIX,201,-0.0051,0.0000,0.4304,49.75%
+Low EWMA volatility,High VIX,66,-0.0101,0.0250,0.5208,50.00%
+Low current total volatility,Overall,267,-0.0073,0.0333,0.4523,50.56%
+Low current total volatility,Normal VIX,201,0.0018,0.0333,0.4343,51.24%
+Low current total volatility,High VIX,66,-0.0351,-0.0500,0.5056,48.48%
+Low idiosyncratic volatility to SPY,Overall,267,0.0345,0.0167,0.3873,50.19%
+Low idiosyncratic volatility to SPY,Normal VIX,201,0.0143,-0.0167,0.3878,48.26%
+Low idiosyncratic volatility to SPY,High VIX,66,0.0962,0.0833,0.3821,56.06%
+Low volatility shock,Overall,264,0.0199,0.0167,0.4173,50.76%
+Low volatility shock,Normal VIX,200,0.0182,0.0167,0.4092,50.50%
+Low volatility shock,High VIX,64,0.0255,0.0500,0.4449,51.56%

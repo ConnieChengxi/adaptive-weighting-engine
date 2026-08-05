@@ -1,0 +1,35 @@
+model:
+  code: L3
+  name: elastic_net_ic
+  target: next_period_factor_ic
+  ic_method: spearman_rank
+  retrain_frequency: monthly
+  training_window_months: 36
+  min_training_rows: 24
+  negative_prediction_weight: 0.0
+  fallback: neutral_prior
+  prior_weights:
+    momentum_score_z: 0.3333333333
+    liquidity_1m_z: 0.3333333333
+    volatility_score_z: 0.3333333333
+  shrinkage:
+    enabled: true
+    ic_weight: 0.5
+    baseline_weight: 0.5
+  turnover_adjustment:
+    enabled: true
+    framework: PTA
+    lambda: 0.05
+  features:
+    include_market_features: true
+    ic_lag_months: [1, 2, 3]
+    ic_rolling_means: [3, 6]
+  estimator:
+    family: linear_model
+    type: elastic_net
+    alpha: 0.001
+    l1_ratio: 0.5
+    fit_intercept: true
+    max_iter: 10000
+    random_state: 42
+  description: Mainline linear ML model combining Ridge and Lasso penalties

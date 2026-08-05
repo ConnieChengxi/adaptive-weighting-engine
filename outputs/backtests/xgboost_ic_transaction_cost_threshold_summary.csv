@@ -1,2 +1,0 @@
-candidate_model,max_bps_tested,first_bps_where_candidate_underperforms
-xgboost_ic,50,5

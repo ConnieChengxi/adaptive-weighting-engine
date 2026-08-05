@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
 import pandas as pd
 
 
@@ -11,9 +12,21 @@ def compute_drawdown(return_series: pd.Series) -> pd.Series:
     return cumulative / running_max - 1.0
 
 
-def compute_net_returns(return_series: pd.Series, turnover_series: pd.Series, transaction_cost_bps: float) -> pd.Series:
+def compute_net_returns(
+    return_series: pd.Series,
+    turnover_series: pd.Series | None = None,
+    transaction_cost_bps: float | None = None,
+    transaction_cost_rate_series: pd.Series | None = None,
+) -> pd.Series:
+    gross_returns = return_series.fillna(0.0)
+    if transaction_cost_rate_series is not None:
+        return gross_returns - transaction_cost_rate_series.fillna(0.0)
+
+    if turnover_series is None or transaction_cost_bps is None:
+        raise ValueError("Either transaction_cost_rate_series or both turnover_series and transaction_cost_bps must be provided")
+
     transaction_cost_rate = transaction_cost_bps / 10000.0
-    return return_series.fillna(0.0) - turnover_series.fillna(0.0) * transaction_cost_rate
+    return gross_returns - turnover_series.fillna(0.0) * transaction_cost_rate
 
 
 def annualized_compound_return(return_series: pd.Series, annualization: float = 12.0) -> float:
@@ -25,9 +38,19 @@ def annualized_compound_return(return_series: pd.Series, annualization: float = 
     return growth ** (annualization / n_periods) - 1.0
 
 
-def summarize_performance(return_series: pd.Series, turnover_series: pd.Series, transaction_cost_bps: float) -> dict[str, float]:
+def summarize_performance(
+    return_series: pd.Series,
+    turnover_series: pd.Series,
+    transaction_cost_bps: float | None = None,
+    transaction_cost_rate_series: pd.Series | None = None,
+) -> dict[str, float]:
     gross_returns = return_series.fillna(0.0)
-    net_returns = compute_net_returns(gross_returns, turnover_series, transaction_cost_bps)
+    net_returns = compute_net_returns(
+        gross_returns,
+        turnover_series=turnover_series,
+        transaction_cost_bps=transaction_cost_bps,
+        transaction_cost_rate_series=transaction_cost_rate_series,
+    )
 
     n_periods = len(gross_returns)
     annualization = 12.0
@@ -48,4 +71,7 @@ def summarize_performance(return_series: pd.Series, turnover_series: pd.Series, 
         "calmar_ratio": calmar_ratio,
         "turnover": turnover_series.mean() if not turnover_series.empty else 0.0,
         "net_return_after_costs": annualized_compound_return(net_returns, annualization=annualization),
+        "average_transaction_cost_rate": (
+            transaction_cost_rate_series.fillna(0.0).mean() if transaction_cost_rate_series is not None else turnover_series.fillna(0.0).mean() * (transaction_cost_bps or 0.0) / 10000.0
+        ),
     }

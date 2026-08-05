@@ -1,0 +1,19 @@
+Model,Dimension,Mean weight,Weight standard deviation,Share of months as unique largest weight
+A1,Market-adjusted relative performance,0.3259,0.1557,21.75%
+A1,Implementation friction,0.3478,0.1662,29.31%
+A1,Sector-specific uncertainty,0.3264,0.1436,26.28%
+L1,Market-adjusted relative performance,0.3302,0.1622,24.17%
+L1,Implementation friction,0.3286,0.1489,23.26%
+L1,Sector-specific uncertainty,0.3412,0.1476,24.47%
+L2,Market-adjusted relative performance,0.3452,0.1682,27.19%
+L2,Implementation friction,0.3282,0.1532,23.26%
+L2,Sector-specific uncertainty,0.3266,0.1397,20.85%
+L3,Market-adjusted relative performance,0.3398,0.1638,26.28%
+L3,Implementation friction,0.3334,0.1537,23.56%
+L3,Sector-specific uncertainty,0.3268,0.1366,20.54%
+T1,Market-adjusted relative performance,0.3212,0.1443,19.64%
+T1,Implementation friction,0.3405,0.1421,27.49%
+T1,Sector-specific uncertainty,0.3383,0.1322,24.17%
+T2,Market-adjusted relative performance,0.3298,0.1546,24.17%
+T2,Implementation friction,0.3311,0.1471,23.87%
+T2,Sector-specific uncertainty,0.3391,0.1458,25.38%

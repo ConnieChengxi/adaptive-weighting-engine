@@ -35,18 +35,20 @@ def build_rolling_ic_weights(
             np.nan,
         )
 
-    if fallback == "equal_factor_weight":
-        equal_weight = 1.0 / len(weight_columns)
-        for weight_column in weight_columns:
-            weights_frame[weight_column] = weights_frame[weight_column].fillna(equal_weight)
-    elif fallback == "fixed_weight_baseline":
+    if fallback in {"fixed_weight_baseline", "neutral_prior"}:
         if fallback_weights is None:
-            raise ValueError("fallback_weights is required when fallback is fixed_weight_baseline")
+            raise ValueError("fallback_weights is required when fallback is fixed_weight_baseline or neutral_prior")
         for factor_column in factor_columns:
             weight_column = f"{factor_column}_weight"
             if factor_column not in fallback_weights:
                 raise ValueError(f"Missing fallback weight for {factor_column}")
             weights_frame[weight_column] = weights_frame[weight_column].fillna(fallback_weights[factor_column])
+    elif fallback == "equal_factor_weight":
+        equal_weight = 1.0 / len(weight_columns)
+        for weight_column in weight_columns:
+            weights_frame[weight_column] = weights_frame[weight_column].fillna(equal_weight)
+    else:
+        raise ValueError(f"Unsupported fallback strategy: {fallback}")
 
     if shrinkage_ic_weight is not None or shrinkage_baseline_weight is not None:
         if fallback_weights is None:

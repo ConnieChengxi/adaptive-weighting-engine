@@ -1,10 +1,15 @@
 factors:
   momentum:
-    windows_months: [3, 6]
+    current_windows_months: [3, 6]
+    residual_window_months: 24
+    candidate_lookbacks_months: [6, 12]
+    retained_lookback_months: 12
+    skip_recent_months: 1
   liquidity:
     window_days: 21
-  downside_risk:
-    window_days: 126
+    winsorization:
+      lower_quantile: 0.01
+      upper_quantile: 0.99
   volatility:
     window_days: 63
 

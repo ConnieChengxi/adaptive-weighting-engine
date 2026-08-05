@@ -1,0 +1,7 @@
+Item,(1) Effective cost per unit turnover (bps),(2) Transaction cost rate (bps)
+log10(average selected winsorised Amihud),2.407***,1.246***
+,(<0.001),(<0.001)
+Turnover,-,14.730***
+,,(<0.001)
+Observations,"1,372","2,058"
+R2,0.081,0.672

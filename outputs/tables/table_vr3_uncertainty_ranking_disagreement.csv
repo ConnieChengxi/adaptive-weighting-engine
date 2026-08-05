@@ -1,0 +1,4 @@
+Sample,Number of months,Mean absolute rank difference,Median absolute rank difference,Share of months with different top sector,Average top-3 overlap share,Share of months with different top-3 set
+Overall,267,1.9100,1.7800,79.78%,0.5100,93.63%
+Normal VIX,201,1.9300,1.7800,78.61%,0.5000,95.52%
+High VIX,66,1.8500,1.7800,83.33%,0.5400,87.88%

@@ -1,0 +1,6 @@
+Factor,Overall mean IC,High-VIX mean IC,Mean monthly rank correlation with spread proxy,Mean monthly rank correlation with raw Amihud,Mean monthly rank difference vs raw Amihud
+High illiquidity from volume,0.0322,0.0730,0,1,
+High Amihud illiquidity (raw),0.0486,0.0966,0,1,
+High Amihud illiquidity (winsorised),0.0487,0.0975,0,1,0
+High Amihud illiquidity (median),0.0341,0.1017,0,1,
+High Corwin-Schultz spread,-0.0214,0.0147,,0,

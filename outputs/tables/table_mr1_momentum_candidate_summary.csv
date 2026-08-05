@@ -1,0 +1,10 @@
+Factor,Sample,Number of months,Mean IC,Median IC,IC standard deviation,Share of positive IC months
+12-1 residual momentum,Overall,234,0.0133,0.0083,0.4322,50.00%
+12-1 residual momentum,Normal VIX,183,-0.0164,-0.0333,0.4415,46.99%
+12-1 residual momentum,High VIX,51,0.1199,0.1667,0.3820,60.78%
+6-1 residual momentum,Overall,240,0.0110,0.0333,0.4359,52.08%
+6-1 residual momentum,Normal VIX,186,-0.0030,0.0333,0.4402,52.69%
+6-1 residual momentum,High VIX,54,0.0596,0.0250,0.4209,50.00%
+Current 3m + 6m momentum,Overall,267,0.0047,0.0333,0.4441,50.56%
+Current 3m + 6m momentum,Normal VIX,201,0.0093,0.0333,0.4242,50.75%
+Current 3m + 6m momentum,High VIX,66,-0.0093,0.0083,0.5031,50.00%

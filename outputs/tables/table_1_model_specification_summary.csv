@@ -1,5 +1,9 @@
-model_name,weighting_logic,adaptive_or_not,ml_or_not,shrinkage_rule
-Model 0,Equal-weight benchmark across selected ETF universe,No,No,Not applicable
-Model 1,"Fixed multi-factor weights: Momentum 0.35, Liquidity 0.15, Downside Risk 0.25, Volatility 0.25",No,No,Not applicable
-Model 2,Rolling Information Coefficient weighting,Yes,No,80/20 shrinkage toward fixed-weight baseline
-Model 3,XGBoost-predicted factor IC weighting,Yes,Yes,80/20 shrinkage toward fixed-weight baseline
+Model code,model_family,Weighting logic,time_varying_weights,ML-based,shrinkage_treatment
+B0,Naive benchmark,Equal-weight allocation across all 9 sector ETFs; no factor signal used,No,No,Not applicable
+S1,Static retained-dimension model,Equal weights across the three retained standardised signals,No,No,Not applicable
+A1,Rolling-IC adaptive model,Dimension weights updated using trailing realised IC evidence,Yes,No,Common validation-selected shrinkage to neutral weights
+L1,Ridge IC model,Dimension weights based on Ridge-predicted dimension ICs,Yes,Yes,Common validation-selected shrinkage to neutral weights
+L2,Lasso IC model,Dimension weights based on Lasso-predicted dimension ICs,Yes,Yes,Common validation-selected shrinkage to neutral weights
+L3,Elastic Net IC model,Dimension weights based on Elastic Net-predicted dimension ICs,Yes,Yes,Common validation-selected shrinkage to neutral weights
+T1,Random Forest IC model,Dimension weights based on Random Forest-predicted dimension ICs,Yes,Yes,Common validation-selected shrinkage to neutral weights
+T2,XGBoost IC model,Dimension weights based on XGBoost-predicted dimension ICs,Yes,Yes,Common validation-selected shrinkage to neutral weights

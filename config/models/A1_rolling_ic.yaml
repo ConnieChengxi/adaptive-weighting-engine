@@ -1,0 +1,29 @@
+model:
+  code: A1
+  name: rolling_ic
+  ic_method: spearman_rank
+  lookback_months: 12
+  negative_ic_weight: 0.0
+  fallback: neutral_prior
+  prior_weights:
+    momentum_score_z: 0.3333333333
+    liquidity_1m_z: 0.3333333333
+    volatility_score_z: 0.3333333333
+  shrinkage:
+    enabled: true
+    ic_weight: 0.5
+    baseline_weight: 0.5
+  turnover_adjustment:
+    enabled: true
+    framework: PTA
+    lambda: 0.05
+  robustness:
+    no_shrinkage:
+      enabled: false
+      ic_weight: 1.0
+      baseline_weight: 0.0
+    shrinkage_60_40:
+      enabled: false
+      ic_weight: 0.6
+      baseline_weight: 0.4
+  description: Rolling IC adaptive dimension weighting model over the three retained core proxies

@@ -1,0 +1,8 @@
+model:
+  code: B0
+  name: equal_weight_benchmark
+  portfolio_rule: equal_weight_full_universe
+  use_factors: false
+  adaptive: false
+  machine_learning: false
+  description: Monthly equal-weight benchmark holding all 9 ETFs in the universe

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 import sys
 
@@ -12,30 +13,42 @@ SRC_DIR = ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from adaptive_weighting.backtest.evaluation import annualized_compound_return, compute_net_returns, summarize_performance
+from adaptive_weighting.backtest.engine import (
+    build_equal_weight_benchmark_panel,
+    build_portfolio_returns,
+    compute_time_varying_transaction_costs,
+    compute_turnover,
+    prepare_panel,
+    run_equal_weight_backtest,
+    run_scored_backtest,
+)
 from adaptive_weighting.ic.compute_ic import compute_monthly_factor_ic
 from adaptive_weighting.models.fixed_weight import build_fixed_weight_score
+from adaptive_weighting.models.linear_ic_weighting import predict_factor_ic_with_linear_model
 from adaptive_weighting.models.rolling_ic_weighting import apply_rolling_ic_score, build_rolling_ic_weights
+from adaptive_weighting.models.turnover_adjustment import apply_post_model_turnover_adjustment
+from adaptive_weighting.models.tree_ic_weighting import predict_factor_ic_with_random_forest
 from adaptive_weighting.models.xgboost_ic_weighting import (
     apply_predicted_ic_score,
     build_predicted_ic_weights,
     build_xgboost_ic_feature_frame,
     predict_factor_ic_with_xgboost,
 )
-from adaptive_weighting.portfolio.selection import select_top_n_by_score
-
 
 BACKTEST_CONFIG = ROOT / "config" / "backtest.yaml"
-FIXED_WEIGHT_CONFIG = ROOT / "config" / "models" / "fixed_weight.yaml"
-ROLLING_IC_CONFIG = ROOT / "config" / "models" / "rolling_ic.yaml"
-XGBOOST_IC_CONFIG = ROOT / "config" / "models" / "xgboost_ic.yaml"
+FIXED_WEIGHT_CONFIG = ROOT / "config" / "models" / "S1_static_equal_factor.yaml"
+ROLLING_IC_CONFIG = ROOT / "config" / "models" / "A1_rolling_ic.yaml"
+RIDGE_IC_CONFIG = ROOT / "config" / "models" / "L1_ridge_ic.yaml"
+LASSO_IC_CONFIG = ROOT / "config" / "models" / "L2_lasso_ic.yaml"
+ELASTIC_NET_IC_CONFIG = ROOT / "config" / "models" / "L3_elastic_net_ic.yaml"
+RANDOM_FOREST_IC_CONFIG = ROOT / "config" / "models" / "T1_random_forest_ic.yaml"
+XGBOOST_IC_CONFIG = ROOT / "config" / "models" / "T2_xgboost_ic.yaml"
 PANEL_PATH = ROOT / "data" / "processed" / "monthly_factor_panel.csv"
 OUTPUT_DIR = ROOT / "outputs" / "backtests"
 
 FACTOR_COLUMNS = [
     "momentum_score_z",
     "liquidity_1m_z",
-    "downside_risk_score_z",
     "volatility_score_z",
 ]
 
@@ -45,50 +58,24 @@ def load_yaml(path: Path) -> dict:
         return yaml.safe_load(handle)
 
 
-def prepare_panel(path: Path) -> pd.DataFrame:
-    panel = pd.read_csv(path, parse_dates=["Date"]).sort_values(["symbol", "Date"]).reset_index(drop=True)
-    panel["next_month_return"] = panel.groupby("symbol")["Close"].shift(-1) / panel["Close"] - 1.0
-    return panel
-
-
-def compute_turnover(selection: pd.DataFrame) -> pd.DataFrame:
-    weights = selection.pivot(index="Date", columns="symbol", values="portfolio_weight").fillna(0.0)
-    turnover = weights.diff().abs().sum(axis=1)
-    turnover.iloc[0] = weights.iloc[0].abs().sum()
-    return turnover.rename("turnover").reset_index()
-
-
-def build_portfolio_returns(selection: pd.DataFrame) -> pd.DataFrame:
-    portfolio = (
-        selection.groupby("Date", as_index=False)
-        .agg(
-            portfolio_return=("weighted_return", "sum"),
-            selected_symbols=("symbol", lambda values: ",".join(sorted(values))),
-        )
-    )
-    return portfolio
-
-
-def build_equal_weight_benchmark_panel(tradable: pd.DataFrame) -> pd.DataFrame:
-    benchmark = tradable.copy()
-    counts = benchmark.groupby("Date")["symbol"].transform("count")
-    benchmark["portfolio_weight"] = 1.0 / counts
-    benchmark["weighted_return"] = benchmark["portfolio_weight"] * benchmark["next_month_return"]
-    return benchmark
-
-
 def prepare_scored_panel(panel: pd.DataFrame, factor_weights: dict[str, float]) -> pd.DataFrame:
     scored = build_fixed_weight_score(panel, factor_weights)
     return scored
 
 
-def build_fixed_weight_fallback_mapping(factor_weights: dict[str, float]) -> dict[str, float]:
+def build_factor_weight_mapping(factor_weights: dict[str, float]) -> dict[str, float]:
     return {
         "momentum_score_z": factor_weights["momentum"],
         "liquidity_1m_z": factor_weights["liquidity"],
-        "downside_risk_score_z": factor_weights["downside_risk"],
         "volatility_score_z": factor_weights["volatility"],
     }
+
+
+def resolve_prior_weights(model_cfg: dict, default_factor_weights: dict[str, float]) -> dict[str, float]:
+    prior_weights = model_cfg["model"].get("prior_weights")
+    if prior_weights:
+        return prior_weights
+    return build_factor_weight_mapping(default_factor_weights)
 
 
 def resolve_shrinkage_config(rolling_ic_cfg: dict) -> tuple[float | None, float | None]:
@@ -136,12 +123,25 @@ def resolve_model_shrinkage_config(model_cfg: dict) -> tuple[float | None, float
     return shrinkage_cfg["ic_weight"], shrinkage_cfg["baseline_weight"]
 
 
+def apply_turnover_adjustment_if_enabled(weights_frame: pd.DataFrame, model_cfg: dict) -> pd.DataFrame:
+    turnover_adjustment_cfg = model_cfg["model"].get("turnover_adjustment", {})
+    if not turnover_adjustment_cfg.get("enabled", False):
+        return weights_frame
+
+    weight_columns = [column for column in weights_frame.columns if column.endswith("_weight")]
+    if not weight_columns:
+        return weights_frame
+
+    return apply_post_model_turnover_adjustment(
+        weights_frame=weights_frame,
+        weight_columns=weight_columns,
+        penalty_lambda=float(turnover_adjustment_cfg["lambda"]),
+    )
+
+
 def build_tradable_panel(scored: pd.DataFrame, extra_required_columns: list[str] | None = None) -> pd.DataFrame:
     required_columns = [
-        "momentum_3m_z",
-        "momentum_6m_z",
         "liquidity_1m_z",
-        "downside_risk_score_z",
         "volatility_score_z",
         "momentum_score_z",
         "next_month_return",
@@ -157,38 +157,13 @@ def run_model_backtest(
     top_n: int,
     transaction_cost_bps: float,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    selected = select_top_n_by_score(tradable, score_column, top_n)
-    selected["weighted_return"] = selected["portfolio_weight"] * selected["next_month_return"]
-
-    portfolio_returns = build_portfolio_returns(selected)
-    turnover = compute_turnover(selected)
-    portfolio_returns = portfolio_returns.merge(turnover, on="Date", how="left")
-
-    metrics = summarize_performance(
-        portfolio_returns["portfolio_return"],
-        portfolio_returns["turnover"],
+    return run_scored_backtest(
+        tradable,
+        score_column=score_column,
+        top_n=top_n,
         transaction_cost_bps=transaction_cost_bps,
+        framework="top_n",
     )
-    metrics_frame = pd.DataFrame([metrics])
-    return selected, portfolio_returns, metrics_frame
-
-
-def run_equal_weight_backtest(
-    tradable: pd.DataFrame,
-    transaction_cost_bps: float,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    selected = build_equal_weight_benchmark_panel(tradable)
-    portfolio_returns = build_portfolio_returns(selected)
-    turnover = compute_turnover(selected)
-    portfolio_returns = portfolio_returns.merge(turnover, on="Date", how="left")
-
-    metrics = summarize_performance(
-        portfolio_returns["portfolio_return"],
-        portfolio_returns["turnover"],
-        transaction_cost_bps=transaction_cost_bps,
-    )
-    metrics_frame = pd.DataFrame([metrics])
-    return selected, portfolio_returns, metrics_frame
 
 
 def save_backtest_outputs(
@@ -232,53 +207,6 @@ def save_model_comparison(metrics_by_model: dict[str, pd.DataFrame], filename: s
     print(f"Saved {comparison_path.relative_to(ROOT)}")
 
 
-def build_transaction_cost_sensitivity(
-    fixed_portfolio_returns: pd.DataFrame,
-    candidate_portfolio_returns: pd.DataFrame,
-    candidate_label: str,
-    max_bps: int = 50,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    records: list[dict[str, float | int | str]] = []
-
-    for bps in range(max_bps + 1):
-        fixed_net_ann = annualized_compound_return(
-            compute_net_returns(
-                fixed_portfolio_returns["portfolio_return"],
-                fixed_portfolio_returns["turnover"],
-                bps,
-            )
-        )
-        candidate_net_ann = annualized_compound_return(
-            compute_net_returns(
-                candidate_portfolio_returns["portfolio_return"],
-                candidate_portfolio_returns["turnover"],
-                bps,
-            )
-        )
-        records.append(
-            {
-                "transaction_cost_bps": bps,
-                "fixed_weight_net_annualized_return": fixed_net_ann,
-                f"{candidate_label}_net_annualized_return": candidate_net_ann,
-                f"{candidate_label}_minus_fixed_weight": candidate_net_ann - fixed_net_ann,
-            }
-        )
-
-    sensitivity = pd.DataFrame(records)
-    crossing = sensitivity[sensitivity[f"{candidate_label}_minus_fixed_weight"] < 0]
-    threshold_bps = int(crossing["transaction_cost_bps"].iloc[0]) if not crossing.empty else None
-    summary = pd.DataFrame(
-        [
-            {
-                "candidate_model": candidate_label,
-                "max_bps_tested": max_bps,
-                "first_bps_where_candidate_underperforms": threshold_bps,
-            }
-        ]
-    )
-    return sensitivity, summary
-
-
 def run_rolling_ic_variant(
     prefix: str,
     scored: pd.DataFrame,
@@ -296,10 +224,12 @@ def run_rolling_ic_variant(
         lookback_months=rolling_ic_cfg["model"]["lookback_months"],
         fallback=rolling_ic_cfg["model"]["fallback"],
         negative_ic_weight=rolling_ic_cfg["model"]["negative_ic_weight"],
-        fallback_weights=build_fixed_weight_fallback_mapping(factor_weights),
+        fallback_weights=resolve_prior_weights(rolling_ic_cfg, factor_weights),
         shrinkage_ic_weight=shrinkage_ic_weight,
         shrinkage_baseline_weight=shrinkage_baseline_weight,
     )
+    weights_frame.to_csv(OUTPUT_DIR / f"{prefix}_raw_weight_history.csv", index=False)
+    weights_frame = apply_turnover_adjustment_if_enabled(weights_frame, rolling_ic_cfg)
     weights_frame.to_csv(OUTPUT_DIR / f"{prefix}_weight_history.csv", index=False)
 
     rolling_scored = apply_rolling_ic_score(scored, weights_frame, FACTOR_COLUMNS)
@@ -309,7 +239,6 @@ def run_rolling_ic_variant(
             "rolling_ic_score",
             "momentum_score_z_weight",
             "liquidity_1m_z_weight",
-            "downside_risk_score_z_weight",
             "volatility_score_z_weight",
         ],
     )
@@ -323,10 +252,14 @@ def run_rolling_ic_variant(
     return selected, portfolio_returns, metrics
 
 
-def main() -> None:
+def run_legacy_artifact_export() -> None:
     backtest_cfg = load_yaml(BACKTEST_CONFIG)
     fixed_weight_cfg = load_yaml(FIXED_WEIGHT_CONFIG)
     rolling_ic_cfg = load_yaml(ROLLING_IC_CONFIG)
+    ridge_ic_cfg = load_yaml(RIDGE_IC_CONFIG)
+    lasso_ic_cfg = load_yaml(LASSO_IC_CONFIG)
+    elastic_net_ic_cfg = load_yaml(ELASTIC_NET_IC_CONFIG)
+    random_forest_ic_cfg = load_yaml(RANDOM_FOREST_IC_CONFIG)
     xgboost_ic_cfg = load_yaml(XGBOOST_IC_CONFIG)
 
     top_n = backtest_cfg["portfolio"]["top_n"]
@@ -388,21 +321,124 @@ def main() -> None:
         {
             "equal_weight_benchmark": equal_weight_metrics,
             "fixed_weight": fixed_metrics,
-            "rolling_ic_80_20": rolling_metrics_by_model["rolling_ic"],
+            "rolling_ic": rolling_metrics_by_model["rolling_ic"],
             "rolling_ic_no_shrinkage": rolling_metrics_by_model["rolling_ic_no_shrinkage"],
             "rolling_ic_60_40": rolling_metrics_by_model["rolling_ic_shrinkage_60_40"],
         },
         filename="rolling_ic_robustness_comparison.csv",
     )
 
+    model_feature_cfg = elastic_net_ic_cfg["model"]["features"]
     xgboost_feature_frame, xgboost_feature_columns = build_xgboost_ic_feature_frame(
         panel=scored,
         factor_ic_frame=factor_ic_frame,
         factor_columns=FACTOR_COLUMNS,
-        ic_lag_months=xgboost_ic_cfg["model"]["features"]["ic_lag_months"],
-        ic_rolling_means=xgboost_ic_cfg["model"]["features"]["ic_rolling_means"],
+        ic_lag_months=model_feature_cfg["ic_lag_months"],
+        ic_rolling_means=model_feature_cfg["ic_rolling_means"],
     )
     xgboost_feature_frame.to_csv(OUTPUT_DIR / "xgboost_ic_feature_frame.csv", index=False)
+
+    linear_model_cfgs = {
+        "ridge_ic": ridge_ic_cfg,
+        "lasso_ic": lasso_ic_cfg,
+        "elastic_net_ic": elastic_net_ic_cfg,
+    }
+    linear_model_metrics: dict[str, pd.DataFrame] = {}
+    for output_name, model_cfg in linear_model_cfgs.items():
+        linear_estimator_cfg = model_cfg["model"]["estimator"].copy()
+        linear_estimator_type = str(linear_estimator_cfg.pop("type"))
+        linear_estimator_cfg.pop("family", None)
+        prediction_frame = predict_factor_ic_with_linear_model(
+            feature_frame=xgboost_feature_frame,
+            factor_columns=FACTOR_COLUMNS,
+            feature_columns=xgboost_feature_columns,
+            training_window_months=model_cfg["model"]["training_window_months"],
+            min_training_rows=model_cfg["model"]["min_training_rows"],
+            estimator_type=linear_estimator_type,
+            estimator_params=linear_estimator_cfg,
+        )
+        prediction_frame.to_csv(OUTPUT_DIR / f"{output_name}_predictions.csv", index=False)
+
+        weights = build_predicted_ic_weights(
+            prediction_frame=prediction_frame,
+            factor_columns=FACTOR_COLUMNS,
+            negative_prediction_weight=model_cfg["model"]["negative_prediction_weight"],
+            fallback=model_cfg["model"]["fallback"],
+            fallback_weights=resolve_prior_weights(model_cfg, factor_weights),
+            shrinkage_ic_weight=resolve_model_shrinkage_config(model_cfg)[0],
+            shrinkage_baseline_weight=resolve_model_shrinkage_config(model_cfg)[1],
+        )
+        weights.to_csv(OUTPUT_DIR / f"{output_name}_raw_weight_history.csv", index=False)
+        weights = apply_turnover_adjustment_if_enabled(weights, model_cfg)
+        weights.to_csv(OUTPUT_DIR / f"{output_name}_weight_history.csv", index=False)
+
+        model_scored = apply_predicted_ic_score(scored, weights, FACTOR_COLUMNS)
+        model_tradable = build_tradable_panel(
+            model_scored,
+            extra_required_columns=[
+                "xgboost_ic_score",
+                "momentum_score_z_weight",
+                "liquidity_1m_z_weight",
+                "volatility_score_z_weight",
+            ],
+        )
+        selected, portfolio_returns, metrics = run_model_backtest(
+            model_tradable,
+            score_column="xgboost_ic_score",
+            top_n=top_n,
+            transaction_cost_bps=transaction_cost_bps,
+        )
+        save_backtest_outputs(output_name, selected, portfolio_returns, metrics)
+        linear_model_metrics[output_name] = metrics
+
+    random_forest_estimator_cfg = random_forest_ic_cfg["model"]["estimator"].copy()
+    random_forest_estimator_cfg.pop("family", None)
+    random_forest_estimator_cfg.pop("type", None)
+    random_forest_prediction_frame = predict_factor_ic_with_random_forest(
+        feature_frame=xgboost_feature_frame,
+        factor_columns=FACTOR_COLUMNS,
+        feature_columns=xgboost_feature_columns,
+        training_window_months=random_forest_ic_cfg["model"]["training_window_months"],
+        min_training_rows=random_forest_ic_cfg["model"]["min_training_rows"],
+        estimator_params=random_forest_estimator_cfg,
+    )
+    random_forest_prediction_frame.to_csv(OUTPUT_DIR / "random_forest_ic_predictions.csv", index=False)
+
+    random_forest_weights = build_predicted_ic_weights(
+        prediction_frame=random_forest_prediction_frame,
+        factor_columns=FACTOR_COLUMNS,
+        negative_prediction_weight=random_forest_ic_cfg["model"]["negative_prediction_weight"],
+        fallback=random_forest_ic_cfg["model"]["fallback"],
+        fallback_weights=resolve_prior_weights(random_forest_ic_cfg, factor_weights),
+        shrinkage_ic_weight=resolve_model_shrinkage_config(random_forest_ic_cfg)[0],
+        shrinkage_baseline_weight=resolve_model_shrinkage_config(random_forest_ic_cfg)[1],
+    )
+    random_forest_weights.to_csv(OUTPUT_DIR / "random_forest_ic_raw_weight_history.csv", index=False)
+    random_forest_weights = apply_turnover_adjustment_if_enabled(random_forest_weights, random_forest_ic_cfg)
+    random_forest_weights.to_csv(OUTPUT_DIR / "random_forest_ic_weight_history.csv", index=False)
+
+    random_forest_scored = apply_predicted_ic_score(scored, random_forest_weights, FACTOR_COLUMNS)
+    random_forest_tradable = build_tradable_panel(
+        random_forest_scored,
+        extra_required_columns=[
+            "xgboost_ic_score",
+            "momentum_score_z_weight",
+            "liquidity_1m_z_weight",
+            "volatility_score_z_weight",
+        ],
+    )
+    random_forest_selected, random_forest_portfolio_returns, random_forest_metrics = run_model_backtest(
+        random_forest_tradable,
+        score_column="xgboost_ic_score",
+        top_n=top_n,
+        transaction_cost_bps=transaction_cost_bps,
+    )
+    save_backtest_outputs(
+        "random_forest_ic",
+        random_forest_selected,
+        random_forest_portfolio_returns,
+        random_forest_metrics,
+    )
 
     xgboost_prediction_frame = predict_factor_ic_with_xgboost(
         feature_frame=xgboost_feature_frame,
@@ -419,10 +455,12 @@ def main() -> None:
         factor_columns=FACTOR_COLUMNS,
         negative_prediction_weight=xgboost_ic_cfg["model"]["negative_prediction_weight"],
         fallback=xgboost_ic_cfg["model"]["fallback"],
-        fallback_weights=build_fixed_weight_fallback_mapping(factor_weights),
+        fallback_weights=resolve_prior_weights(xgboost_ic_cfg, factor_weights),
         shrinkage_ic_weight=resolve_model_shrinkage_config(xgboost_ic_cfg)[0],
         shrinkage_baseline_weight=resolve_model_shrinkage_config(xgboost_ic_cfg)[1],
     )
+    xgboost_weights.to_csv(OUTPUT_DIR / "xgboost_ic_raw_weight_history.csv", index=False)
+    xgboost_weights = apply_turnover_adjustment_if_enabled(xgboost_weights, xgboost_ic_cfg)
     xgboost_weights.to_csv(OUTPUT_DIR / "xgboost_ic_weight_history.csv", index=False)
 
     xgboost_scored = apply_predicted_ic_score(scored, xgboost_weights, FACTOR_COLUMNS)
@@ -432,7 +470,6 @@ def main() -> None:
             "xgboost_ic_score",
             "momentum_score_z_weight",
             "liquidity_1m_z_weight",
-            "downside_risk_score_z_weight",
             "volatility_score_z_weight",
         ],
     )
@@ -448,28 +485,58 @@ def main() -> None:
         {
             "equal_weight_benchmark": equal_weight_metrics,
             "fixed_weight": fixed_metrics,
-            "rolling_ic_80_20": rolling_metrics_by_model["rolling_ic"],
+            "rolling_ic": rolling_metrics_by_model["rolling_ic"],
+            "ridge_ic": linear_model_metrics["ridge_ic"],
+            "lasso_ic": linear_model_metrics["lasso_ic"],
+            "elastic_net_ic": linear_model_metrics["elastic_net_ic"],
+            "random_forest_ic": random_forest_metrics,
             "xgboost_ic": xgboost_metrics,
         },
         filename="full_model_comparison_metrics.csv",
     )
 
-    xgboost_tc_sensitivity, xgboost_tc_summary = build_transaction_cost_sensitivity(
-        fixed_portfolio_returns=fixed_portfolio_returns,
-        candidate_portfolio_returns=xgboost_portfolio_returns,
-        candidate_label="xgboost_ic",
-        max_bps=50,
+    save_model_comparison(
+        {
+            "ridge_ic": linear_model_metrics["ridge_ic"],
+            "lasso_ic": linear_model_metrics["lasso_ic"],
+            "elastic_net_ic": linear_model_metrics["elastic_net_ic"],
+            "random_forest_ic": random_forest_metrics,
+            "xgboost_ic": xgboost_metrics,
+        },
+        filename="ml_model_robustness_comparison.csv",
     )
-    xgboost_tc_sensitivity.to_csv(
-        OUTPUT_DIR / "xgboost_ic_transaction_cost_sensitivity.csv",
-        index=False,
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Compatibility runner for the legacy generic backtest export layer."
     )
-    xgboost_tc_summary.to_csv(
-        OUTPUT_DIR / "xgboost_ic_transaction_cost_threshold_summary.csv",
-        index=False,
+    parser.add_argument(
+        "--legacy-artifacts",
+        action="store_true",
+        help="Explicitly generate the legacy generic backtest artifacts. The canonical dissertation pipeline no longer requires these files.",
     )
-    print(f"Saved {(OUTPUT_DIR / 'xgboost_ic_transaction_cost_sensitivity.csv').relative_to(ROOT)}")
-    print(f"Saved {(OUTPUT_DIR / 'xgboost_ic_transaction_cost_threshold_summary.csv').relative_to(ROOT)}")
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    if not args.legacy_artifacts:
+        print(
+            "run_backtest.py no longer writes the generic backtest layer by default.\n"
+            "Use the canonical pipeline instead:\n"
+            "  1. python3 scripts/run_common_shrinkage_selection.py\n"
+            "  2. python3 scripts/run_repeated_walkforward_family_comparison.py\n"
+            "  3. python3 scripts/run_turnover_framework_backtests.py\n"
+            "  4. python3 scripts/generate_factor_contribution_assets.py\n"
+            "  5. python3 scripts/generate_report_assets.py\n\n"
+            "If you need the deprecated generic artifacts temporarily, rerun with:\n"
+            "  python3 scripts/run_backtest.py --legacy-artifacts"
+        )
+        return
+
+    print("Generating deprecated generic backtest artifacts for compatibility...")
+    run_legacy_artifact_export()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,5 @@
+Metric,Correlation with cross-sectional std,Correlation with top-minus-bottom spread,Correlation with average pairwise correlation,Correlation with first principal component share
+Average Amihud illiquidity,0.3199,0.3226,-0.1708,-0.1564
+Cross-sectional std of Amihud illiquidity,0.3127,0.3168,-0.1682,-0.1634
+Average Corwin-Schultz spread,0.4453,0.4258,0.2216,0.1374
+Cross-sectional std of dollar volume,0.2362,0.2294,-0.2555,-0.2258

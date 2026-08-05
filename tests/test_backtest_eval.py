@@ -17,5 +17,6 @@ def test_summarize_performance_returns_expected_keys() -> None:
         "calmar_ratio",
         "turnover",
         "net_return_after_costs",
+        "average_transaction_cost_rate",
     }
     assert set(summary) == expected_keys

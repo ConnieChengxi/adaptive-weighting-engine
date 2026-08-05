@@ -100,9 +100,9 @@ def build_predicted_ic_weights(
             np.nan,
         )
 
-    if fallback == "fixed_weight_baseline":
+    if fallback in {"fixed_weight_baseline", "neutral_prior"}:
         if fallback_weights is None:
-            raise ValueError("fallback_weights is required when fallback is fixed_weight_baseline")
+            raise ValueError("fallback_weights is required when fallback is fixed_weight_baseline or neutral_prior")
         for factor_column in factor_columns:
             weight_column = f"{factor_column}_weight"
             weights_frame[weight_column] = weights_frame[weight_column].fillna(fallback_weights[factor_column])
@@ -110,6 +110,8 @@ def build_predicted_ic_weights(
         equal_weight = 1.0 / len(weight_columns)
         for weight_column in weight_columns:
             weights_frame[weight_column] = weights_frame[weight_column].fillna(equal_weight)
+    else:
+        raise ValueError(f"Unsupported fallback strategy: {fallback}")
 
     if shrinkage_ic_weight is not None or shrinkage_baseline_weight is not None:
         if fallback_weights is None:
@@ -120,7 +122,7 @@ def build_predicted_ic_weights(
             weight_column = f"{factor_column}_weight"
             baseline_weight = fallback_weights[factor_column]
             weights_frame[weight_column] = (
-                shrinkage_ic_weight * weights_frame[weight_column]
+                shrinkage_ic_weight * weights_frame[weight_column].fillna(baseline_weight)
                 + shrinkage_baseline_weight * baseline_weight
             )
 

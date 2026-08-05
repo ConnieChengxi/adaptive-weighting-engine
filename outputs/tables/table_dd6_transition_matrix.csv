@@ -1,0 +1,10 @@
+From tercile,To tercile,Transition probability
+Top tercile,Top tercile,0.3151
+Top tercile,Middle tercile,0.3262
+Top tercile,Bottom tercile,0.3587
+Middle tercile,Top tercile,0.3485
+Middle tercile,Middle tercile,0.3435
+Middle tercile,Bottom tercile,0.3080
+Bottom tercile,Top tercile,0.3364
+Bottom tercile,Middle tercile,0.3303
+Bottom tercile,Bottom tercile,0.3333

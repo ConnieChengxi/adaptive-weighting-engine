@@ -1,0 +1,8 @@
+Evidence block,Metric,Value,Why it matters
+Market contamination,Average SPY R-squared across sectors,0.5868,"A large share of sector ETF variance is explained by the common market component, so total volatility is mechanically a mixed object."
+Market contamination,Range of SPY R-squared across sectors,0.183 to 0.802,"The degree of market contamination differs materially across sectors, so total volatility does not isolate sector-specific uncertainty consistently."
+Market contamination,Average residual variance share across sectors,0.4132,Residual uncertainty is the unexplained component after removing SPY; this is conceptually closer to the sector-specific uncertainty dimension.
+Predictive comparison,Overall mean IC: low current total volatility,-0.0073,The total-volatility candidate does not provide positive cross-sectional ranking value under the retained specification.
+Predictive comparison,Overall mean IC: low idiosyncratic volatility to SPY,0.0345,The idiosyncratic-volatility candidate better matches the residual-uncertainty concept and delivers a stronger overall signal.
+Predictive comparison,High-VIX mean IC: low current total volatility,-0.0351,"Even in stressed states, total volatility does not separate sector-specific uncertainty from market-wide stress cleanly."
+Predictive comparison,High-VIX mean IC: low idiosyncratic volatility to SPY,0.0962,"In stressed states, the residual-uncertainty proxy becomes materially more informative for next-month ranking."

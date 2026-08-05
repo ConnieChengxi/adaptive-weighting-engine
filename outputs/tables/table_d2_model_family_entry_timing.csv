@@ -1,0 +1,7 @@
+Model / specification,Common evaluation start,First model-driven month
+B0 benchmark,31/12/2001,31/12/2001
+S1 static retained-dimension model,31/12/2001,31/12/2001
+A1 rolling-IC adaptive model,31/12/2001,31/12/2002
+L1-L3 linear ML IC models,31/12/2001,31/03/2004
+T1 Random Forest IC model,31/12/2001,31/03/2004
+T2 XGBoost IC model,31/12/2001,31/12/2003

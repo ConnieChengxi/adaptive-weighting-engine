@@ -1,0 +1,13 @@
+model:
+  code: S1
+  name: static_equal_factor
+  portfolio_rule: top_n_equal_weight_within_selected
+  top_n: 3
+  use_factors: true
+  adaptive: false
+  machine_learning: false
+  factors:
+    momentum: 0.3333333333
+    liquidity: 0.3333333333
+    volatility: 0.3333333333
+  description: Static equal-dimension model over proxies for market-adjusted relative performance, implementation friction, and sector-specific uncertainty

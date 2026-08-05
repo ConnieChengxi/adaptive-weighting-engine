@@ -4,6 +4,7 @@ portfolio:
   rebalance_frequency: monthly
 
 costs:
+  method: corwin_schultz_half_spread
   transaction_cost_bps: 10
 
 evaluation:

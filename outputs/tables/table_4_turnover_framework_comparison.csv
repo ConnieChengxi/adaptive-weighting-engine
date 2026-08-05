@@ -1,0 +1,22 @@
+Framework,Model,Annualised return,Annualised volatility,Sharpe ratio,Maximum drawdown,Calmar ratio,Turnover,Net return after costs,Average transaction cost rate
+F1: No control,S1: Static equal-dimension model,14.88%,16.64%,0.89,-16.41%,0.91,53.11%,13.71%,0.09%
+F2: PTA,S1: Static equal-dimension model,14.88%,16.64%,0.89,-16.41%,0.91,53.11%,13.71%,0.09%
+F3: Holding-buffer rule,S1: Static equal-dimension model,15.75%,15.89%,0.99,-17.14%,0.92,12.43%,15.46%,0.02%
+F1: No control,A1: Rolling IC adaptive model,12.96%,16.89%,0.77,-23.40%,0.55,61.02%,11.72%,0.09%
+F2: PTA,A1: Rolling IC adaptive model,13.04%,17.01%,0.77,-23.40%,0.56,58.76%,11.87%,0.09%
+F3: Holding-buffer rule,A1: Rolling IC adaptive model,13.83%,16.95%,0.82,-21.49%,0.64,14.69%,13.49%,0.03%
+F1: No control,L1: Ridge IC model,14.49%,17.68%,0.82,-24.73%,0.59,75.71%,12.97%,0.11%
+F2: PTA,L1: Ridge IC model,14.26%,17.85%,0.80,-24.73%,0.58,71.19%,12.84%,0.11%
+F3: Holding-buffer rule,L1: Ridge IC model,13.65%,16.87%,0.81,-16.49%,0.83,24.86%,13.09%,0.04%
+F1: No control,L2: Lasso IC model,12.06%,17.53%,0.69,-24.73%,0.49,71.19%,10.58%,0.11%
+F2: PTA,L2: Lasso IC model,13.81%,17.27%,0.80,-24.73%,0.56,68.93%,12.38%,0.11%
+F3: Holding-buffer rule,L2: Lasso IC model,16.67%,16.97%,0.98,-16.49%,1.01,24.86%,16.08%,0.04%
+F1: No control,L3: Elastic Net IC model,12.28%,17.72%,0.69,-24.73%,0.50,73.45%,10.74%,0.12%
+F2: PTA,L3: Elastic Net IC model,13.90%,17.43%,0.80,-24.73%,0.56,72.32%,12.40%,0.11%
+F3: Holding-buffer rule,L3: Elastic Net IC model,11.83%,17.38%,0.68,-21.07%,0.56,23.73%,11.29%,0.04%
+F1: No control,T1: Random Forest IC model,9.07%,17.18%,0.53,-25.84%,0.35,68.93%,7.66%,0.11%
+F2: PTA,T1: Random Forest IC model,9.87%,16.85%,0.59,-24.21%,0.41,64.41%,8.52%,0.10%
+F3: Holding-buffer rule,T1: Random Forest IC model,14.16%,16.10%,0.88,-21.77%,0.65,20.34%,13.72%,0.03%
+F1: No control,T2: XGBoost IC model,10.64%,16.94%,0.63,-24.96%,0.43,71.19%,9.16%,0.11%
+F2: PTA,T2: XGBoost IC model,11.20%,17.17%,0.65,-24.96%,0.45,68.93%,9.75%,0.11%
+F3: Holding-buffer rule,T2: XGBoost IC model,12.71%,16.89%,0.75,-21.77%,0.58,24.86%,12.17%,0.04%

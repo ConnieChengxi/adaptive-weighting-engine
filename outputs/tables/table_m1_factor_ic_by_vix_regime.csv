@@ -1,0 +1,10 @@
+Dimension,Sample,Number of months,Mean IC,Median IC,IC standard deviation,IC 25th percentile,IC 75th percentile,Share of positive IC months
+Market-adjusted relative performance,Overall,294,0.0084,0.0167,0.4439,-0.3167,0.3125,50.34%
+Market-adjusted relative performance,Normal VIX,232,-0.0162,-0.0167,0.4566,-0.3667,0.2542,47.84%
+Market-adjusted relative performance,High VIX,62,0.1008,0.1167,0.3823,-0.2125,0.4292,59.68%
+Implementation friction,Overall,329,0.0408,0.0500,0.3705,-0.2167,0.3000,53.50%
+Implementation friction,Normal VIX,247,0.0242,0.0167,0.3759,-0.2583,0.3000,50.20%
+Implementation friction,High VIX,82,0.0909,0.1417,0.3512,-0.0792,0.3167,63.41%
+Sector-specific uncertainty,Overall,327,0.0293,0.0167,0.4000,-0.2333,0.3500,50.15%
+Sector-specific uncertainty,Normal VIX,247,0.0034,-0.0167,0.4046,-0.2917,0.3333,47.77%
+Sector-specific uncertainty,High VIX,80,0.1090,0.1250,0.3769,-0.1708,0.3833,57.50%

@@ -1,65 +1,158 @@
 # Adaptive Weighting Engine
 
-Research codebase for a dissertation on machine-learning-assisted adaptive factor weighting for ETF selection and risk-adjusted portfolio performance.
+Research codebase for a dissertation on monthly U.S. sector ETF selection under a retained three-signal design, common shrinkage discipline, and turnover-aware execution.
 
-## Research Goal
+## Current Design
 
-This project compares four portfolio construction approaches on a U.S. sector ETF universe:
+The current retained design is:
 
-- Model 0: equal-weight benchmark
-- Model 1: fixed-weight multi-factor scoring
-- Model 2: rolling Information Coefficient dynamic weighting
-- Model 3: XGBoost-predicted IC adaptive weighting
+- Universe: 9 U.S. sector ETFs
+  - `XLB`, `XLE`, `XLF`, `XLI`, `XLK`, `XLP`, `XLU`, `XLV`, `XLY`
+- Market benchmark: `SPY`
+- Frequency: monthly cross-sectional ranking
+- Retained signal block:
+  - `12-1` residual momentum
+  - winsorised Amihud illiquidity
+  - idiosyncratic volatility relative to `SPY`
+- Model families:
+  - `B0` equal-weight benchmark
+  - `S1` static equal-dimension model
+  - `A1` rolling-IC adaptive model
+  - `L1` Ridge IC
+  - `L2` Lasso IC
+  - `L3` Elastic Net IC
+  - `T1` Random Forest IC
+  - `T2` XGBoost IC
+- Common shrinkage:
+  - selected under ordered validation
+  - retained setting: `0.5` baseline weight / `0.5` model-implied IC weight
+- Retained execution rule:
+  - top-3 portfolio
+  - Top-6 holding-buffer boundary
 
-The machine learning component is used to predict factor effectiveness, not ETF returns directly.
-
-## Initial Universe
-
-- Sector ETFs: `XLK`, `XLF`, `XLE`, `XLV`, `XLY`, `XLI`, `XLU`, `XLP`, `XLB`
-- Benchmark: `SPY`
-- Optional extensions later: `XLRE`, `XLC`
-- Sample target: `2010-01-01` to `2024-12-31`
+The machine-learning layer predicts dimension-level signal usefulness, not ETF returns directly.
 
 ## Repository Layout
 
 ```text
 config/                 Project configuration
 data/raw/               Downloaded raw market data
-data/interim/           Intermediate research datasets
-data/processed/         Clean model-ready datasets
-docs/                   Proposal, methodology, dissertation notes
-notebooks/              Exploratory notebooks
-outputs/                Figures, tables, logs, backtest artifacts
+data/processed/         Processed monthly and daily panels
+outputs/backtests/      Backtest-level intermediate and model outputs
+outputs/figures/        Dissertation-ready figures
+outputs/tables/         Dissertation-ready tables
 scripts/                Reproducible entry-point scripts
 src/adaptive_weighting/ Core research package
-tests/                  Unit tests for research logic
+tests/                  Unit tests for core logic
 ```
 
-## Quick Start
-
-1. Create a virtual environment.
-2. Install dependencies.
-3. Download the initial dataset.
+## Setup
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+## Raw Data Download
+
+```bash
 python3 scripts/download_data.py
 ```
 
-Downloaded files will be saved into `data/raw/`.
+This populates `data/raw/` with ETF, `SPY`, and `VIX` data.
 
-## First Milestones
+## Execution Sequence
 
-- Milestone 1: download and validate ETF, SPY, and VIX data
-- Milestone 2: construct monthly factor panel
-- Milestone 3: implement fixed-weight baseline
-- Milestone 4: implement rolling IC dynamic weighting
-- Milestone 5: implement XGBoost IC prediction and full walk-forward backtest
+If you want the current dissertation pipeline only, run the scripts in this order.
 
-## Reproducibility Notes
+### 1. Build processed panels
 
-- Keep raw downloaded data immutable after collection.
-- Put experiment choices in `config/` instead of hardcoding them into notebooks.
-- Use scripts for repeatable steps and notebooks only for exploration and diagnostics.
+```bash
+python3 scripts/build_features.py
+```
+
+Outputs:
+
+- `data/processed/monthly_factor_panel.csv`
+- `data/processed/daily_spread_panel.csv`
+
+### 2. Generate retained-dimension diagnostics
+
+```bash
+python3 scripts/generate_momentum_diagnostics.py
+python3 scripts/generate_liquidity_diagnostics.py
+python3 scripts/generate_volatility_diagnostics.py
+```
+
+These scripts generate the retained proxy-comparison tables and figures used in the methodology and appendix material.
+
+### 3. Run common shrinkage selection
+
+```bash
+python3 scripts/run_common_shrinkage_selection.py
+```
+
+Key outputs:
+
+- `outputs/tables/table_sh1_common_shrinkage_validation_grid.csv`
+- `outputs/tables/table_sh2_common_shrinkage_selection_summary.csv`
+- `outputs/tables/table_sh3_common_shrinkage_test_comparison.csv`
+- `outputs/tables/table_sh4_common_shrinkage_selection_conclusion.csv`
+
+### 4. Run repeated walk-forward validation
+
+```bash
+python3 scripts/run_repeated_walkforward_family_comparison.py
+```
+
+Key outputs:
+
+- `outputs/tables/table_wf1_repeated_walkforward_fold_selection.csv`
+- `outputs/tables/table_wf2_repeated_walkforward_test_results.csv`
+- `outputs/tables/table_wf3_repeated_walkforward_family_comparison.csv`
+
+### 5. Run turnover-framework comparison
+
+```bash
+python3 scripts/run_turnover_framework_backtests.py
+```
+
+This generates the framework-level backtest artifacts used for:
+
+- turnover framework comparison
+- holding-buffer sensitivity
+- Appendix F execution diagnostics
+
+### 6. Generate contribution and design figures
+
+```bash
+python3 scripts/generate_factor_contribution_assets.py
+```
+
+### 7. Compile report tables and figures
+
+```bash
+python3 scripts/generate_report_assets.py
+```
+
+This is the final reporting step for the current pipeline. It reads from `outputs/backtests/` and writes cleaned presentation-ready files to:
+
+- `outputs/tables/`
+- `outputs/figures/`
+
+## Practical Full Run
+
+For a clean end-to-end refresh of the current retained design:
+
+```bash
+python3 scripts/build_features.py
+python3 scripts/generate_momentum_diagnostics.py
+python3 scripts/generate_liquidity_diagnostics.py
+python3 scripts/generate_volatility_diagnostics.py
+python3 scripts/run_common_shrinkage_selection.py
+python3 scripts/run_repeated_walkforward_family_comparison.py
+python3 scripts/run_turnover_framework_backtests.py
+python3 scripts/generate_factor_contribution_assets.py
+python3 scripts/generate_report_assets.py
+```

@@ -1,0 +1,7 @@
+Factor,Direction,Number of months,Mean IC,Median IC,IC standard deviation,Share of positive IC months
+Market-adjusted relative performance,As specified,234,0.0133,0.0083,0.4322,50.00%
+Market-adjusted relative performance,Reversed sign,234,-0.0133,-0.0083,0.4322,48.72%
+Implementation friction,As specified,269,0.0487,0.0500,0.3735,53.16%
+Implementation friction,Reversed sign,269,-0.0487,-0.0500,0.3735,45.35%
+Sector-specific uncertainty,As specified,267,0.0345,0.0167,0.3873,50.19%
+Sector-specific uncertainty,Reversed sign,267,-0.0345,-0.0167,0.3873,49.44%

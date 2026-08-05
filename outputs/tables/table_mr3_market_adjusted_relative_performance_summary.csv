@@ -1,0 +1,4 @@
+Candidate proxy,Specification role,Overall mean IC,High-VIX mean IC,Correlation with raw momentum,Selection outcome
+Current 3m + 6m momentum,Raw benchmark,0.0047,-0.0093,1.0000,Not retained
+6-1 residual momentum,Shorter residual specification,0.0110,0.0596,0.5859,Not retained
+12-1 residual momentum,Skip-month residual specification,0.0133,0.1199,0.4464,Retained

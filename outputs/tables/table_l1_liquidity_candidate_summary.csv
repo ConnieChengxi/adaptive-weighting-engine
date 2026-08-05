@@ -1,0 +1,22 @@
+Factor,Sample,Number of months,Mean IC,Median IC,IC standard deviation,IC 25th percentile,IC 75th percentile,Share of positive IC months,Diagnostic status
+High Amihud illiquidity (median),Overall,269,0.0341,0.0167,0.3933,-0.2500,0.3000,50.19%,Main-model candidate
+High Amihud illiquidity (median),Normal VIX,201,0.0113,-0.0500,0.4066,-0.3167,0.3000,45.77%,Some regime support
+High Amihud illiquidity (median),High VIX,68,0.1017,0.1333,0.3449,-0.1167,0.3125,63.24%,Strong regime signal
+High Amihud illiquidity (raw),Overall,269,0.0486,0.0500,0.3733,-0.2167,0.3167,53.16%,Main-model candidate
+High Amihud illiquidity (raw),Normal VIX,201,0.0323,0.0000,0.3834,-0.2667,0.3167,49.75%,Some regime support
+High Amihud illiquidity (raw),High VIX,68,0.0966,0.1333,0.3395,-0.0667,0.3167,63.24%,Strong regime signal
+High Amihud illiquidity (winsorised),Overall,269,0.0487,0.0500,0.3735,-0.2167,0.3167,53.16%,Main-model candidate
+High Amihud illiquidity (winsorised),Normal VIX,201,0.0322,0.0000,0.3840,-0.2667,0.3167,49.75%,Some regime support
+High Amihud illiquidity (winsorised),High VIX,68,0.0975,0.1333,0.3388,-0.0667,0.3167,63.24%,Strong regime signal
+High Corwin-Schultz spread,Overall,270,-0.0209,-0.0250,0.3852,-0.3000,0.2667,48.15%,Weak under current specification
+High Corwin-Schultz spread,Normal VIX,202,-0.0329,-0.0333,0.3910,-0.3333,0.2667,48.51%,Weak in this regime
+High Corwin-Schultz spread,High VIX,68,0.0147,-0.0083,0.3677,-0.1667,0.2292,47.06%,Some regime support
+High illiquidity from volume,Overall,269,0.0322,0.0167,0.4096,-0.2500,0.3333,50.56%,Main-model candidate
+High illiquidity from volume,Normal VIX,201,0.0183,0.0000,0.4079,-0.2500,0.3167,47.76%,Some regime support
+High illiquidity from volume,High VIX,68,0.0730,0.1167,0.4148,-0.2708,0.3708,58.82%,Strong regime signal
+High liquidity level,Overall,269,-0.0322,-0.0167,0.4096,-0.3333,0.2500,47.21%,Weak under current specification
+High liquidity level,Normal VIX,201,-0.0183,0.0000,0.4079,-0.3167,0.2500,49.25%,Weak in this regime
+High liquidity level,High VIX,68,-0.0730,-0.1167,0.4148,-0.3708,0.2708,41.18%,Weak in this regime
+Positive liquidity shock,Overall,267,-0.0255,-0.0167,0.3381,-0.2417,0.2000,47.94%,Weak under current specification
+Positive liquidity shock,Normal VIX,201,-0.0135,0.0000,0.3299,-0.2333,0.2167,49.25%,Weak in this regime
+Positive liquidity shock,High VIX,66,-0.0621,-0.0333,0.3620,-0.2708,0.1292,43.94%,Weak in this regime

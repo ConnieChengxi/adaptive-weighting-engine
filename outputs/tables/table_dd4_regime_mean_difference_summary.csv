@@ -1,0 +1,6 @@
+Metric,normal_vix_months,high_vix_months,normal_vix_mean,high_vix_mean,high_minus_normal
+Cross-sectional standard deviation (%),248,82,3.0956,4.4677,1.3721
+Top-minus-bottom spread (%),248,82,9.7285,14.2176,4.4891
+Average pairwise correlation,245,75,0.5018,0.6212,0.1193
+First principal component variance share (%),245,75,62.9202,71.4779,8.5577
+Top-3 membership turnover (%),248,81,68.6828,67.9012,-0.7816

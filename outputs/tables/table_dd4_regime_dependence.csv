@@ -1,0 +1,13 @@
+Sample,Metric,Mean,Median,10th percentile,90th percentile
+Normal VIX,Cross-sectional standard deviation (%),3.0956,2.7989,1.6546,4.9552
+Normal VIX,Cross-sectional interquartile range (%),3.3639,3.0371,1.4958,5.6666
+Normal VIX,Top-minus-bottom spread (%),9.7285,8.6683,4.9508,15.1750
+Normal VIX,Average pairwise correlation,0.5018,0.5081,0.2209,0.7166
+Normal VIX,First principal component variance share (%),62.9202,61.2208,46.4818,84.5832
+Normal VIX,Top-3 membership turnover (%),68.6828,66.6667,33.3333,100.0000
+High VIX,Cross-sectional standard deviation (%),4.4677,4.0298,2.4117,7.6653
+High VIX,Cross-sectional interquartile range (%),4.5979,3.8183,2.3287,8.4165
+High VIX,Top-minus-bottom spread (%),14.2176,12.4961,7.9532,23.9793
+High VIX,Average pairwise correlation,0.6212,0.6755,0.3865,0.7986
+High VIX,First principal component variance share (%),71.4779,73.0276,52.6322,87.7072
+High VIX,Top-3 membership turnover (%),67.9012,66.6667,33.3333,100.0000

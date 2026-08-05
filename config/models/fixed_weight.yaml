@@ -1,7 +1,0 @@
-model:
-  name: fixed_weight
-  factors:
-    momentum: 0.35
-    liquidity: 0.15
-    downside_risk: 0.25
-    volatility: 0.25
