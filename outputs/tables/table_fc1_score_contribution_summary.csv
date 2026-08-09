@@ -1,22 +1,22 @@
 Model,Dimension,Mean portfolio-weighted score contribution,Mean absolute portfolio-weighted score contribution,Share of positive-contribution months,Mean share of absolute portfolio-weighted score contribution
-A1,Implementation friction,0.2309,0.2400,89.80%,39.30%
-A1,Market-adjusted relative performance,0.1595,0.1702,85.37%,30.54%
-A1,Sector-specific uncertainty,0.1517,0.1684,86.39%,30.16%
-L1,Implementation friction,0.1769,0.1870,92.52%,35.45%
-L1,Market-adjusted relative performance,0.1310,0.1527,84.35%,29.11%
-L1,Sector-specific uncertainty,0.1715,0.1785,95.24%,35.44%
-L2,Implementation friction,0.1878,0.1968,91.50%,36.33%
-L2,Market-adjusted relative performance,0.1546,0.1747,85.37%,32.04%
-L2,Sector-specific uncertainty,0.1520,0.1609,92.18%,31.63%
-L3,Implementation friction,0.1939,0.2025,92.52%,37.26%
-L3,Market-adjusted relative performance,0.1422,0.1683,84.35%,31.20%
-L3,Sector-specific uncertainty,0.1518,0.1619,92.18%,31.54%
+A1,Implementation friction,0.2358,0.2524,86.73%,39.70%
+A1,Market-adjusted relative performance,0.1635,0.1730,85.03%,30.07%
+A1,Sector-specific uncertainty,0.1584,0.1722,87.07%,30.24%
+L1,Implementation friction,0.2164,0.2201,94.90%,39.67%
+L1,Market-adjusted relative performance,0.1406,0.1642,84.35%,30.22%
+L1,Sector-specific uncertainty,0.1422,0.1553,89.46%,30.11%
+L2,Implementation friction,0.2228,0.2248,96.26%,40.08%
+L2,Market-adjusted relative performance,0.1498,0.1719,86.05%,31.75%
+L2,Sector-specific uncertainty,0.1349,0.1468,87.76%,28.18%
+L3,Implementation friction,0.2254,0.2274,96.26%,40.39%
+L3,Market-adjusted relative performance,0.1469,0.1690,86.05%,31.29%
+L3,Sector-specific uncertainty,0.1368,0.1478,89.46%,28.32%
 S1,Implementation friction,0.2097,0.2179,95.92%,44.14%
 S1,Market-adjusted relative performance,0.1073,0.1323,82.99%,25.33%
 S1,Sector-specific uncertainty,0.1466,0.1537,92.86%,30.53%
-T1,Implementation friction,0.1947,0.2078,87.76%,36.63%
-T1,Market-adjusted relative performance,0.1399,0.1665,82.31%,30.50%
-T1,Sector-specific uncertainty,0.1612,0.1719,92.52%,32.87%
-T2,Implementation friction,0.1725,0.1846,90.14%,34.28%
-T2,Market-adjusted relative performance,0.1422,0.1656,81.29%,30.94%
-T2,Sector-specific uncertainty,0.1715,0.1799,93.54%,34.78%
+T1,Implementation friction,0.1891,0.2033,86.39%,34.84%
+T1,Market-adjusted relative performance,0.1433,0.1663,81.63%,30.44%
+T1,Sector-specific uncertainty,0.1733,0.1803,93.54%,34.72%
+T2,Implementation friction,0.1914,0.2030,88.10%,35.67%
+T2,Market-adjusted relative performance,0.1520,0.1759,80.27%,30.98%
+T2,Sector-specific uncertainty,0.1712,0.1784,94.90%,33.36%

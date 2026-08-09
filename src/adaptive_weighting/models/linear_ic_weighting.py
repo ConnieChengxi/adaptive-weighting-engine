@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import ElasticNet, Lasso, Ridge
+from sklearn.preprocessing import StandardScaler
 
 
 LINEAR_MODEL_REGISTRY = {
@@ -50,9 +51,13 @@ def predict_factor_ic_with_linear_model(
                 predicted_values.append(np.nan)
                 continue
 
+            scaler = StandardScaler()
+            X_train_scaled = scaler.fit_transform(X_train)
+            X_pred_scaled = scaler.transform(X_pred)
+
             model = estimator_cls(**estimator_params)
-            model.fit(X_train, y_train)
-            predicted_values.append(float(model.predict(X_pred)[0]))
+            model.fit(X_train_scaled, y_train)
+            predicted_values.append(float(model.predict(X_pred_scaled)[0]))
 
         predictions[prediction_column] = predicted_values
 

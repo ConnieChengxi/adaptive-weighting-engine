@@ -599,39 +599,6 @@ def build_traded_leg_linkage_frame_for_source(source: str = "main_result") -> pd
     return pd.concat(frames, ignore_index=True).sort_values(["model", "Date"]).reset_index(drop=True)
 
 
-def compute_transaction_cost_linkage_summary(linkage_frame: pd.DataFrame) -> pd.DataFrame:
-    rows: list[dict[str, object]] = []
-    for model_name, frame in [("Pooled", linkage_frame)] + list(linkage_frame.groupby("model", sort=True)):
-        cost_corr = frame["avg_selected_winsorised_amihud"].corr(frame["transaction_cost_rate"], method="spearman")
-        effective_corr = frame["avg_selected_winsorised_amihud"].corr(frame["effective_cost_per_unit_turnover"], method="spearman")
-        spread_corr = frame["avg_selected_winsorised_amihud"].corr(frame["avg_selected_spread"], method="spearman")
-        rows.append(
-            {
-                "Model": model_name,
-                "Number of months": int(frame["Date"].nunique()),
-                "Spearman corr with transaction cost rate": float(cost_corr) if pd.notna(cost_corr) else np.nan,
-                "Spearman corr with effective cost per turnover": float(effective_corr) if pd.notna(effective_corr) else np.nan,
-                "Spearman corr with selected average spread": float(spread_corr) if pd.notna(spread_corr) else np.nan,
-                "Mean transaction cost rate": float(frame["transaction_cost_rate"].mean()),
-                "Mean effective cost per turnover": float(frame["effective_cost_per_unit_turnover"].dropna().mean()),
-            }
-        )
-    return pd.DataFrame(rows)
-
-
-def format_transaction_linkage_table(df: pd.DataFrame) -> pd.DataFrame:
-    formatted = df.copy()
-    for column in [
-        "Spearman corr with transaction cost rate",
-        "Spearman corr with effective cost per turnover",
-        "Spearman corr with selected average spread",
-        "Mean transaction cost rate",
-        "Mean effective cost per turnover",
-    ]:
-        formatted[column] = formatted[column].map(lambda value: "" if pd.isna(value) else f"{value:.4f}")
-    return formatted
-
-
 def make_liquidity_candidate_boxplot(ic_frame: pd.DataFrame) -> None:
     plot_df = ic_frame[ic_frame["factor"].isin(PLOT_RETAINED_LIQUIDITY_CANDIDATES)].copy()
     labels = PLOT_RETAINED_LIQUIDITY_CANDIDATES
@@ -746,98 +713,6 @@ def make_outlier_robustness_bar_chart(outlier_df: pd.DataFrame) -> None:
     plt.close(fig)
 
 
-def make_transaction_cost_linkage_scatter(linkage_frame: pd.DataFrame) -> None:
-    def add_asymptotic_fit(ax: plt.Axes, x: pd.Series, y: pd.Series, color: str) -> None:
-        valid = pd.DataFrame({"x": x, "y": y}).dropna().sort_values("x")
-        if len(valid) < 5 or valid["x"].nunique() < 4:
-            return
-        x_min = float(valid["x"].min())
-        x_range = float(valid["x"].max() - x_min)
-        if x_range <= 0:
-            return
-        x_scaled = (valid["x"].to_numpy() - x_min) / x_range
-        y_vals = valid["y"].to_numpy()
-        best: tuple[float, float, np.ndarray] | None = None
-        for c in np.linspace(0.5, 8.0, 60):
-            z = 1.0 - np.exp(-c * x_scaled)
-            design = np.column_stack([np.ones_like(z), z])
-            coeffs, _, _, _ = np.linalg.lstsq(design, y_vals, rcond=None)
-            if not np.isfinite(coeffs).all():
-                continue
-            with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
-                fitted = design @ coeffs
-            if not np.isfinite(fitted).all():
-                continue
-            sse = float(np.square(y_vals - fitted).sum())
-            if not np.isfinite(sse):
-                continue
-            if best is None or sse < best[0]:
-                best = (sse, c, coeffs)
-        if best is None:
-            return
-        _, c_best, coeffs_best = best
-        x_grid = np.linspace(float(valid["x"].min()), float(valid["x"].max()), 200)
-        x_grid_scaled = (x_grid - x_min) / x_range
-        z_grid = 1.0 - np.exp(-c_best * x_grid_scaled)
-        y_grid = coeffs_best[0] + coeffs_best[1] * z_grid
-        ax.plot(x_grid, y_grid, color=color, linestyle="--", linewidth=2.0, alpha=0.95)
-
-    palette = {
-        "S1": "#264653",
-        "A1": "#e76f51",
-        "L1": "#8d99ae",
-        "L2": "#bc6c25",
-        "L3": "#577590",
-        "T1": "#43aa8b",
-        "T2": "#2a9d8f",
-    }
-    fig, ax = plt.subplots(figsize=(7.1, 5.4), constrained_layout=True)
-    sns.scatterplot(
-        data=linkage_frame,
-        x="avg_selected_winsorised_amihud",
-        y="transaction_cost_rate",
-        hue="model",
-        palette=palette,
-        alpha=0.75,
-        s=40,
-        ax=ax,
-    )
-    ax.set_title("Selected Winsorised Amihud vs Realised Cost Rate")
-    ax.set_xlabel("Average selected winsorised Amihud")
-    ax.set_ylabel("Transaction cost rate")
-    add_asymptotic_fit(
-        ax,
-        linkage_frame["avg_selected_winsorised_amihud"],
-        linkage_frame["transaction_cost_rate"],
-        "#1d3557",
-    )
-    fig.savefig(FIGURES_DIR / "figure_l5a_amihud_vs_cost_rate.png", dpi=300, bbox_inches="tight")
-    plt.close(fig)
-
-    fig, ax = plt.subplots(figsize=(7.1, 5.4), constrained_layout=True)
-    sns.scatterplot(
-        data=linkage_frame.dropna(subset=["effective_cost_per_unit_turnover"]),
-        x="avg_selected_winsorised_amihud",
-        y="effective_cost_per_unit_turnover",
-        hue="model",
-        palette=palette,
-        alpha=0.75,
-        s=40,
-        ax=ax,
-    )
-    ax.set_title("Selected Winsorised Amihud vs Cost per Unit Turnover")
-    ax.set_xlabel("Average selected winsorised Amihud")
-    ax.set_ylabel("Transaction cost rate / turnover")
-    add_asymptotic_fit(
-        ax,
-        linkage_frame["avg_selected_winsorised_amihud"],
-        linkage_frame["effective_cost_per_unit_turnover"],
-        "#1d3557",
-    )
-    fig.savefig(FIGURES_DIR / "figure_l5b_amihud_vs_cost_per_turnover.png", dpi=300, bbox_inches="tight")
-    plt.close(fig)
-
-
 def main() -> None:
     TABLES_DIR.mkdir(parents=True, exist_ok=True)
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
@@ -854,9 +729,6 @@ def main() -> None:
     factor_direction_summary = compute_factor_direction_summary(panel)
     proxy_selection_summary = compute_proxy_selection_summary(panel)
     outlier_robustness_summary = compute_outlier_robustness_summary()
-    transaction_cost_linkage_frame = build_transaction_cost_linkage_frame()
-    transaction_cost_linkage_summary = compute_transaction_cost_linkage_summary(transaction_cost_linkage_frame)
-
     format_summary_table(liquidity_summary).to_csv(
         TABLES_DIR / "table_l1_liquidity_candidate_summary.csv",
         index=False,
@@ -873,26 +745,17 @@ def main() -> None:
         TABLES_DIR / "table_l4_amihud_outlier_robustness.csv",
         index=False,
     )
-    format_transaction_linkage_table(transaction_cost_linkage_summary).to_csv(
-        TABLES_DIR / "table_l5_amihud_transaction_cost_linkage.csv",
-        index=False,
-    )
-
     make_liquidity_candidate_boxplot(liquidity_ic_frame)
     make_proxy_selection_bar_chart(proxy_selection_summary)
     make_outlier_robustness_bar_chart(outlier_robustness_summary)
-    make_transaction_cost_linkage_scatter(transaction_cost_linkage_frame)
 
     print("Saved outputs/tables/table_l1_liquidity_candidate_summary.csv")
     print("Saved outputs/tables/table_l2_factor_direction_diagnostic.csv")
     print("Saved outputs/tables/table_l3_liquidity_proxy_selection_summary.csv")
     print("Saved outputs/tables/table_l4_amihud_outlier_robustness.csv")
-    print("Saved outputs/tables/table_l5_amihud_transaction_cost_linkage.csv")
     print("Saved outputs/figures/figure_l1_liquidity_candidate_ic_boxplot.png")
     print("Saved outputs/figures/figure_l3_liquidity_proxy_selection_bar.png")
     print("Saved outputs/figures/figure_l4_amihud_outlier_robustness.png")
-    print("Saved outputs/figures/figure_l5a_amihud_vs_cost_rate.png")
-    print("Saved outputs/figures/figure_l5b_amihud_vs_cost_per_turnover.png")
     print(f"VIX high-regime threshold (75th percentile): {vix_threshold:.3f}")
 
 

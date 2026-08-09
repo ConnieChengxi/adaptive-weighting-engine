@@ -51,7 +51,7 @@ CORE3_FACTOR_COLUMNS = [
     "liquidity_1m_z",
     "volatility_score_z",
 ]
-COMMON_SHRINKAGE_GRID = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
+COMMON_SHRINKAGE_GRID = [round(x * 0.1, 1) for x in range(11)]
 
 
 @dataclass(frozen=True)

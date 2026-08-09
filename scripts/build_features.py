@@ -123,12 +123,6 @@ def build_market_feature_frame() -> pd.DataFrame:
     spy_monthly["spy_drawdown"] = spy_monthly["spy_close"] / spy_monthly["spy_close"].cummax() - 1.0
 
     vix_monthly["vix_change_1m"] = vix_monthly["vix_close"].pct_change()
-    vix_monthly["vix_regime"] = pd.qcut(
-        vix_monthly["vix_close"],
-        q=2,
-        labels=["low_vix", "high_vix"],
-        duplicates="drop",
-    )
 
     return spy_monthly.merge(vix_monthly, on="Date", how="inner")
 

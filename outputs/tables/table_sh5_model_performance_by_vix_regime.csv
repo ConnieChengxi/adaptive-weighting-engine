@@ -3,15 +3,15 @@ B0: Naive benchmark,Normal VIX,48,7.71%,7.71%,0.6400,0.00%
 B0: Naive benchmark,High VIX,11,31.24%,31.24%,1.4300,0.00%
 S1: Static equal-dimension model,Normal VIX,48,11.44%,11.18%,0.8100,12.50%
 S1: Static equal-dimension model,High VIX,11,36.58%,36.14%,1.5900,12.12%
-A1: Rolling IC adaptive model,Normal VIX,48,9.31%,8.99%,0.6500,15.28%
-A1: Rolling IC adaptive model,High VIX,11,35.87%,35.39%,1.3200,12.12%
-L1: Ridge IC model,Normal VIX,48,7.32%,6.89%,0.4700,22.22%
-L1: Ridge IC model,High VIX,11,45.94%,44.62%,1.8800,36.36%
-L2: Lasso IC model,Normal VIX,48,9.56%,9.14%,0.6400,22.22%
-L2: Lasso IC model,High VIX,11,53.45%,51.96%,2.1200,36.36%
-L3: Elastic Net IC model,Normal VIX,48,5.29%,4.86%,0.3300,22.22%
-L3: Elastic Net IC model,High VIX,11,45.45%,44.26%,1.7100,30.30%
-T1: Random Forest IC model,Normal VIX,48,10.05%,9.66%,0.7200,20.83%
-T1: Random Forest IC model,High VIX,11,33.95%,33.29%,1.3500,18.18%
-T2: XGBoost IC model,Normal VIX,48,7.27%,6.78%,0.4900,25.00%
-T2: XGBoost IC model,High VIX,11,39.91%,39.06%,1.4800,24.24%
+A1: Rolling IC adaptive model,Normal VIX,48,9.25%,8.89%,0.6600,18.06%
+A1: Rolling IC adaptive model,High VIX,11,34.04%,33.56%,1.2500,12.12%
+L1: Ridge IC model,Normal VIX,48,5.95%,5.53%,0.4100,22.22%
+L1: Ridge IC model,High VIX,11,44.06%,43.19%,1.6800,24.24%
+L2: Lasso IC model,Normal VIX,48,3.97%,3.55%,0.2600,22.22%
+L2: Lasso IC model,High VIX,11,36.93%,35.79%,1.4800,30.30%
+L3: Elastic Net IC model,Normal VIX,48,3.97%,3.55%,0.2600,22.22%
+L3: Elastic Net IC model,High VIX,11,36.93%,35.79%,1.4800,30.30%
+T1: Random Forest IC model,Normal VIX,48,9.04%,8.62%,0.5900,22.22%
+T1: Random Forest IC model,High VIX,11,27.25%,26.44%,1.0200,24.24%
+T2: XGBoost IC model,Normal VIX,48,9.46%,9.05%,0.6200,22.22%
+T2: XGBoost IC model,High VIX,11,40.81%,40.00%,1.5200,24.24%

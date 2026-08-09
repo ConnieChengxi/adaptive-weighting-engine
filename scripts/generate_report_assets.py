@@ -342,7 +342,6 @@ def apply_publication_table_formatting() -> None:
         "table_l1_liquidity_candidate_summary.csv",
         "table_l3_liquidity_proxy_selection_summary.csv",
         "table_l4_amihud_outlier_robustness.csv",
-        "table_l5_amihud_transaction_cost_linkage.csv",
         "table_mr1_momentum_candidate_summary.csv",
         "table_mr3_market_adjusted_relative_performance_summary.csv",
         "table_l2_factor_direction_diagnostic.csv",

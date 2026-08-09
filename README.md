@@ -25,7 +25,7 @@ The current retained design is:
   - `T2` XGBoost IC
 - Common shrinkage:
   - selected under ordered validation
-  - retained setting: `0.5` baseline weight / `0.5` model-implied IC weight
+  - retained setting: `0.4` baseline weight / `0.6` model-implied IC weight
 - Retained execution rule:
   - top-3 portfolio
   - Top-6 holding-buffer boundary
@@ -48,6 +48,10 @@ tests/                  Unit tests for core logic
 
 ## Setup
 
+This repository does not require Poetry for the main research pipeline. The scripts below can be run directly in a standard Python environment.
+
+Use Python `3.10` or newer. The project metadata in `pyproject.toml` requires `>=3.10`, and `pytest` under Poetry will fail if the active interpreter is still `3.9.x`.
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
@@ -64,7 +68,7 @@ This populates `data/raw/` with ETF, `SPY`, and `VIX` data.
 
 ## Execution Sequence
 
-If you want the current dissertation pipeline only, run the scripts in this order.
+Run the scripts below in order to rebuild the current retained research pipeline.
 
 ### 1. Build processed panels
 
@@ -130,7 +134,15 @@ This generates the framework-level backtest artifacts used for:
 python3 scripts/generate_factor_contribution_assets.py
 ```
 
-### 7. Compile report tables and figures
+### 7. Generate Appendix I liquidity-cost evidence
+
+```bash
+python3 scripts/generate_liquidity_cost_exploratory.py
+```
+
+This script generates the Appendix I exploratory linkage tables and figures, including the clustered-by-month regression summary.
+
+### 8. Compile report tables and figures
 
 ```bash
 python3 scripts/generate_report_assets.py
@@ -141,9 +153,9 @@ This is the final reporting step for the current pipeline. It reads from `output
 - `outputs/tables/`
 - `outputs/figures/`
 
-## Practical Full Run
+## Full Reproduction
 
-For a clean end-to-end refresh of the current retained design:
+For a complete end-to-end rebuild of the current retained design, run:
 
 ```bash
 python3 scripts/build_features.py
@@ -154,5 +166,17 @@ python3 scripts/run_common_shrinkage_selection.py
 python3 scripts/run_repeated_walkforward_family_comparison.py
 python3 scripts/run_turnover_framework_backtests.py
 python3 scripts/generate_factor_contribution_assets.py
+python3 scripts/generate_liquidity_cost_exploratory.py
 python3 scripts/generate_report_assets.py
 ```
+
+This sequence rebuilds:
+
+- processed monthly and daily panels
+- retained proxy-comparison diagnostics
+- common shrinkage selection outputs
+- repeated walk-forward evidence
+- turnover-framework and holding-buffer sensitivity outputs
+- contribution, concentration, and model-weight figures
+- Appendix I liquidity-cost evidence
+- dissertation-ready tables and figures in `outputs/tables/` and `outputs/figures/`

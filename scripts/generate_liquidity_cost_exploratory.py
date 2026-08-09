@@ -51,8 +51,13 @@ def prepare_frame() -> pd.DataFrame:
     return frame
 
 
-def fit_ols(data: pd.DataFrame, y_col: str, x_cols: list[str]) -> tuple[pd.Series, pd.Series, float, int]:
-    sample = data[[y_col, *x_cols]].dropna().copy()
+def fit_ols_with_clustered_se(
+    data: pd.DataFrame,
+    y_col: str,
+    x_cols: list[str],
+    cluster_col: str,
+) -> tuple[pd.Series, pd.Series, float, int, int]:
+    sample = data[[cluster_col, y_col, *x_cols]].dropna().copy()
     y = sample[y_col].to_numpy(dtype=float)
     x = sample[x_cols].to_numpy(dtype=float)
     x = np.column_stack([np.ones(len(sample)), x])
@@ -69,12 +74,32 @@ def fit_ols(data: pd.DataFrame, y_col: str, x_cols: list[str]) -> tuple[pd.Serie
     tss = float(((y - y.mean()) ** 2).sum())
     r2 = 1.0 - rss / tss if tss > 0 else np.nan
 
-    sigma2 = rss / df_resid
-    cov = sigma2 * np.linalg.pinv(x.T @ x)
+    xtx_inv = np.linalg.pinv(x.T @ x)
+    clusters = sample[cluster_col]
+    unique_clusters = pd.Index(clusters.dropna().unique())
+    n_clusters = len(unique_clusters)
+
+    if n_clusters >= 2:
+        meat = np.zeros((x.shape[1], x.shape[1]), dtype=float)
+        for cluster_value in unique_clusters:
+            cluster_mask = clusters.eq(cluster_value).to_numpy()
+            x_g = x[cluster_mask]
+            resid_g = resid[cluster_mask]
+            score_g = x_g.T @ resid_g
+            meat += np.outer(score_g, score_g)
+
+        finite_sample_scale = (n_clusters / (n_clusters - 1)) * ((n_obs - 1) / df_resid)
+        cov = finite_sample_scale * xtx_inv @ meat @ xtx_inv
+        dof = n_clusters - 1
+    else:
+        sigma2 = rss / df_resid
+        cov = sigma2 * xtx_inv
+        dof = df_resid
+
     se = np.sqrt(np.diag(cov))
     with np.errstate(divide="ignore", invalid="ignore"):
         t_stats = beta / se
-    p_vals = 2.0 * (1.0 - student_t.cdf(np.abs(t_stats), df=df_resid))
+    p_vals = 2.0 * (1.0 - student_t.cdf(np.abs(t_stats), df=dof))
 
     coef_index = ["Intercept", *x_cols]
     return (
@@ -82,6 +107,7 @@ def fit_ols(data: pd.DataFrame, y_col: str, x_cols: list[str]) -> tuple[pd.Serie
         pd.Series(p_vals, index=coef_index),
         float(r2),
         int(n_obs),
+        int(n_clusters),
     )
 
 
@@ -114,11 +140,17 @@ def build_regression_summary(frame: pd.DataFrame) -> pd.DataFrame:
 
     rows: list[dict[str, object]] = []
     for spec in specs:
-        coefs, p_vals, r2, n_obs = fit_ols(working, spec["y_col"], spec["x_cols"])
+        coefs, p_vals, r2, n_obs, n_clusters = fit_ols_with_clustered_se(
+            working,
+            spec["y_col"],
+            spec["x_cols"],
+            cluster_col="Date",
+        )
         row = {
             "Outcome": spec["outcome"],
             "Specification": spec["specification"],
             "Observations": n_obs,
+            "Month clusters": n_clusters,
             "R-squared": r2,
             "Intercept (bps)": coefs.get("Intercept", np.nan),
             "Intercept p-value": p_vals.get("Intercept", np.nan),
@@ -246,22 +278,6 @@ def format_observations(series: pd.Series) -> pd.Series:
     return series.map(lambda value: f"{int(value):,}")
 
 
-def significance_stars_from_pvalue(p_value_text: str) -> str:
-    if p_value_text == "<0.001":
-        return "***"
-    try:
-        value = float(p_value_text)
-    except (TypeError, ValueError):
-        return ""
-    if value < 0.01:
-        return "***"
-    if value < 0.05:
-        return "**"
-    if value < 0.10:
-        return "*"
-    return ""
-
-
 def build_appendix_ready_regression_table(regression_summary: pd.DataFrame) -> pd.DataFrame:
     keep_mask = (
         (
@@ -283,6 +299,7 @@ def build_appendix_ready_regression_table(regression_summary: pd.DataFrame) -> p
             "Turnover coefficient",
             "Turnover p-value",
             "Observations",
+            "Month clusters",
             "R-squared",
         ]
     ]
@@ -297,15 +314,11 @@ def build_appendix_ready_regression_table(regression_summary: pd.DataFrame) -> p
 
     spec1 = filtered.iloc[0]
     spec2 = filtered.iloc[1]
-    spec1_beta = f"{spec1['Log-Amihud coefficient']}{significance_stars_from_pvalue(spec1['Log-Amihud p-value'])}"
-    spec2_beta = f"{spec2['Log-Amihud coefficient']}{significance_stars_from_pvalue(spec2['Log-Amihud p-value'])}"
-    spec2_turnover = f"{spec2['Turnover coefficient']}{significance_stars_from_pvalue(spec2['Turnover p-value'])}"
-
     wide_rows = [
         {
             "Item": r"log10(average selected winsorised Amihud)",
-            "(1) Effective cost per unit turnover (bps)": spec1_beta,
-            "(2) Transaction cost rate (bps)": spec2_beta,
+            "(1) Effective cost per unit turnover (bps)": spec1["Log-Amihud coefficient"],
+            "(2) Transaction cost rate (bps)": spec2["Log-Amihud coefficient"],
         },
         {
             "Item": "",
@@ -315,7 +328,7 @@ def build_appendix_ready_regression_table(regression_summary: pd.DataFrame) -> p
         {
             "Item": "Turnover",
             "(1) Effective cost per unit turnover (bps)": "-",
-            "(2) Transaction cost rate (bps)": spec2_turnover,
+            "(2) Transaction cost rate (bps)": spec2["Turnover coefficient"],
         },
         {
             "Item": "",
@@ -326,6 +339,11 @@ def build_appendix_ready_regression_table(regression_summary: pd.DataFrame) -> p
             "Item": "Observations",
             "(1) Effective cost per unit turnover (bps)": spec1["Observations"],
             "(2) Transaction cost rate (bps)": spec2["Observations"],
+        },
+        {
+            "Item": "Month clusters",
+            "(1) Effective cost per unit turnover (bps)": f"{int(spec1['Month clusters'])}",
+            "(2) Transaction cost rate (bps)": f"{int(spec2['Month clusters'])}",
         },
         {
             "Item": r"$R^2$",
@@ -343,10 +361,11 @@ def make_log_scatter(frame: pd.DataFrame) -> None:
             "effective_cost_per_unit_turnover_bps",
         ]
     ).copy()
-    coefs, _, _, _ = fit_ols(
+    coefs, _, _, _, _ = fit_ols_with_clustered_se(
         sample,
         "effective_cost_per_unit_turnover_bps",
         ["log10_avg_selected_winsorised_amihud"],
+        cluster_col="Date",
     )
 
     x_grid = np.linspace(

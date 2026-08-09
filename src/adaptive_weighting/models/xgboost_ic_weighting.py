@@ -12,14 +12,12 @@ def build_xgboost_ic_feature_frame(
     ic_lag_months: list[int],
     ic_rolling_means: list[int],
 ) -> tuple[pd.DataFrame, list[str]]:
-    market_columns = ["spy_return_1m", "spy_drawdown", "vix_close", "vix_change_1m", "vix_regime"]
+    market_columns = ["spy_return_1m", "spy_drawdown", "vix_close", "vix_change_1m"]
     market_frame = panel[["Date", *market_columns]].drop_duplicates(subset=["Date"]).sort_values("Date").copy()
-    market_frame["vix_high_regime"] = (market_frame["vix_regime"] == "high_vix").astype(int)
-    market_frame = market_frame.drop(columns=["vix_regime"])
 
     feature_frame = factor_ic_frame.merge(market_frame, on="Date", how="left").sort_values("Date").reset_index(drop=True)
 
-    feature_columns = ["spy_return_1m", "spy_drawdown", "vix_close", "vix_change_1m", "vix_high_regime"]
+    feature_columns = ["spy_return_1m", "spy_drawdown", "vix_close", "vix_change_1m"]
     for factor_column in factor_columns:
         ic_column = f"{factor_column}_ic"
         for lag in ic_lag_months:
