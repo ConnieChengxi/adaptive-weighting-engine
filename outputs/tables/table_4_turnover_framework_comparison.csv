@@ -2,21 +2,21 @@ Framework,Model,Annualised return,Annualised volatility,Sharpe ratio,Maximum dra
 F1: No control,S1: Static equal-dimension model,14.88%,16.64%,0.89,-16.41%,0.91,53.11%,13.71%,0.09%
 F2: PTA,S1: Static equal-dimension model,14.88%,16.64%,0.89,-16.41%,0.91,53.11%,13.71%,0.09%
 F3: Holding-buffer rule,S1: Static equal-dimension model,15.75%,15.89%,0.99,-17.14%,0.92,12.43%,15.46%,0.02%
-F1: No control,A1: Rolling IC adaptive model,12.96%,16.89%,0.77,-23.40%,0.55,61.02%,11.72%,0.09%
-F2: PTA,A1: Rolling IC adaptive model,13.04%,17.01%,0.77,-23.40%,0.56,58.76%,11.87%,0.09%
-F3: Holding-buffer rule,A1: Rolling IC adaptive model,13.83%,16.95%,0.82,-21.49%,0.64,14.69%,13.49%,0.03%
-F1: No control,L1: Ridge IC model,14.15%,17.56%,0.81,-24.73%,0.57,73.45%,12.60%,0.12%
-F2: PTA,L1: Ridge IC model,16.29%,17.47%,0.93,-24.73%,0.66,68.93%,14.83%,0.11%
-F3: Holding-buffer rule,L1: Ridge IC model,11.29%,16.03%,0.70,-18.52%,0.61,24.86%,10.73%,0.04%
-F1: No control,L2: Lasso IC model,13.23%,17.23%,0.77,-24.73%,0.53,67.80%,11.77%,0.11%
-F2: PTA,L2: Lasso IC model,14.41%,17.25%,0.84,-24.73%,0.58,67.80%,12.95%,0.11%
-F3: Holding-buffer rule,L2: Lasso IC model,15.46%,15.85%,0.98,-17.14%,0.90,19.21%,15.05%,0.03%
-F1: No control,L3: Elastic Net IC model,13.08%,17.29%,0.76,-24.73%,0.53,65.54%,11.66%,0.11%
-F2: PTA,L3: Elastic Net IC model,13.85%,17.00%,0.82,-24.73%,0.56,67.80%,12.39%,0.11%
-F3: Holding-buffer rule,L3: Elastic Net IC model,15.46%,15.85%,0.98,-17.14%,0.90,19.21%,15.05%,0.03%
-F1: No control,T1: Random Forest IC model,10.42%,17.80%,0.59,-24.82%,0.42,62.15%,9.11%,0.10%
-F2: PTA,T1: Random Forest IC model,8.54%,17.96%,0.48,-27.76%,0.31,59.89%,7.33%,0.09%
-F3: Holding-buffer rule,T1: Random Forest IC model,12.90%,16.95%,0.76,-24.74%,0.52,20.34%,12.46%,0.03%
-F1: No control,T2: XGBoost IC model,12.04%,17.59%,0.68,-21.04%,0.57,68.93%,10.59%,0.11%
-F2: PTA,T2: XGBoost IC model,11.94%,17.62%,0.68,-21.04%,0.57,67.80%,10.51%,0.11%
-F3: Holding-buffer rule,T2: XGBoost IC model,11.03%,17.54%,0.63,-20.93%,0.53,25.99%,10.50%,0.04%
+F1: No control,A1: Rolling IC adaptive model,9.97%,16.39%,0.61,-23.66%,0.42,64.41%,8.71%,0.10%
+F2: PTA,A1: Rolling IC adaptive model,11.06%,16.45%,0.67,-23.99%,0.46,62.15%,9.85%,0.09%
+F3: Holding-buffer rule,A1: Rolling IC adaptive model,13.49%,16.63%,0.81,-21.49%,0.63,16.95%,13.11%,0.03%
+F1: No control,L1: Ridge IC model,14.62%,17.22%,0.85,-24.40%,0.60,79.10%,12.93%,0.13%
+F2: PTA,L1: Ridge IC model,15.61%,17.37%,0.90,-24.40%,0.64,76.84%,13.97%,0.12%
+F3: Holding-buffer rule,L1: Ridge IC model,12.20%,16.61%,0.73,-21.07%,0.58,22.60%,11.71%,0.04%
+F1: No control,L2: Lasso IC model,14.12%,16.78%,0.84,-24.40%,0.58,73.45%,12.53%,0.12%
+F2: PTA,L2: Lasso IC model,15.30%,17.09%,0.90,-24.40%,0.63,70.06%,13.79%,0.11%
+F3: Holding-buffer rule,L2: Lasso IC model,9.45%,16.26%,0.58,-21.07%,0.45,23.73%,8.91%,0.04%
+F1: No control,L3: Elastic Net IC model,14.12%,16.78%,0.84,-24.40%,0.58,73.45%,12.53%,0.12%
+F2: PTA,L3: Elastic Net IC model,15.30%,17.09%,0.90,-24.40%,0.63,70.06%,13.79%,0.11%
+F3: Holding-buffer rule,L3: Elastic Net IC model,9.45%,16.26%,0.58,-21.07%,0.45,23.73%,8.91%,0.04%
+F1: No control,T1: Random Forest IC model,9.14%,17.52%,0.52,-25.99%,0.35,71.19%,7.72%,0.11%
+F2: PTA,T1: Random Forest IC model,10.04%,17.84%,0.56,-27.76%,0.36,64.41%,8.72%,0.10%
+F3: Holding-buffer rule,T1: Random Forest IC model,12.22%,17.16%,0.71,-24.74%,0.49,22.60%,11.74%,0.04%
+F1: No control,T2: XGBoost IC model,13.03%,17.48%,0.75,-21.04%,0.62,70.06%,11.56%,0.11%
+F2: PTA,T2: XGBoost IC model,12.01%,17.58%,0.68,-21.04%,0.57,68.93%,10.56%,0.11%
+F3: Holding-buffer rule,T2: XGBoost IC model,14.73%,17.43%,0.84,-20.93%,0.70,22.60%,14.25%,0.04%

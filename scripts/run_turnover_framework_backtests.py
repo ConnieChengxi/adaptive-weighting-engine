@@ -42,8 +42,6 @@ from scripts.run_backtest import (
     OUTPUT_DIR,
     build_tradable_panel,
     load_yaml,
-    resolve_shrinkage_config,
-    resolve_model_shrinkage_config,
     resolve_prior_weights,
     run_equal_weight_backtest,
     save_backtest_outputs,
@@ -54,6 +52,7 @@ BASE_FRAMEWORKS = ("baseline", "pta")
 HOLDING_BUFFER_RANKS = (4, 5, 6)
 HOLDING_BUFFER_FRAMEWORKS = tuple(f"holding_buffer_top{rank}" for rank in HOLDING_BUFFER_RANKS)
 FRAMEWORKS = BASE_FRAMEWORKS + HOLDING_BUFFER_FRAMEWORKS
+COMMON_SHRINKAGE_CONCLUSION_PATH = ROOT / "outputs" / "tables" / "table_sh4_common_shrinkage_selection_conclusion.csv"
 
 
 def holding_buffer_rank_for_framework(framework: str) -> int | None:
@@ -106,6 +105,19 @@ def run_model_backtest_under_framework(
     )
 
 
+def load_selected_common_shrinkage() -> tuple[float, float]:
+    if not COMMON_SHRINKAGE_CONCLUSION_PATH.exists():
+        raise FileNotFoundError(
+            f"Missing {COMMON_SHRINKAGE_CONCLUSION_PATH}. Run scripts/run_common_shrinkage_selection.py first."
+        )
+    conclusion = pd.read_csv(COMMON_SHRINKAGE_CONCLUSION_PATH)
+    if conclusion.empty:
+        raise ValueError(f"{COMMON_SHRINKAGE_CONCLUSION_PATH} is empty.")
+    baseline_weight = float(conclusion.loc[0, "selected_baseline_weight"])
+    ic_weight = float(conclusion.loc[0, "selected_ic_weight"])
+    return ic_weight, baseline_weight
+
+
 def main() -> None:
     backtest_cfg = load_yaml(BACKTEST_CONFIG)
     fixed_weight_cfg = load_yaml(FIXED_WEIGHT_CONFIG)
@@ -124,6 +136,7 @@ def main() -> None:
     scored = panel.copy()
     tradable = build_trial_tradable_panel(scored)
     factor_ic_frame = compute_monthly_factor_ic(scored, CORE3_FACTOR_COLUMNS, "next_month_return")
+    common_shrinkage_ic_weight, common_shrinkage_baseline_weight = load_selected_common_shrinkage()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -143,7 +156,6 @@ def main() -> None:
         save_backtest_outputs(prefixed_name("fixed_weight", framework), fixed_selected, fixed_returns, fixed_metrics)
         framework_metrics[framework]["fixed_weight"] = fixed_metrics
 
-    rolling_shrinkage_ic_weight, rolling_shrinkage_baseline_weight = resolve_shrinkage_config(rolling_ic_cfg)
     rolling_raw_weights = build_rolling_ic_weights(
         factor_ic_frame=factor_ic_frame,
         factor_columns=CORE3_FACTOR_COLUMNS,
@@ -151,8 +163,8 @@ def main() -> None:
         fallback=rolling_ic_cfg["model"]["fallback"],
         negative_ic_weight=rolling_ic_cfg["model"]["negative_ic_weight"],
         fallback_weights=resolve_prior_weights(rolling_ic_cfg, factor_weights),
-        shrinkage_ic_weight=rolling_shrinkage_ic_weight,
-        shrinkage_baseline_weight=rolling_shrinkage_baseline_weight,
+        shrinkage_ic_weight=common_shrinkage_ic_weight,
+        shrinkage_baseline_weight=common_shrinkage_baseline_weight,
     )
 
     for framework in FRAMEWORKS:
@@ -212,8 +224,8 @@ def main() -> None:
             negative_prediction_weight=model_cfg["model"]["negative_prediction_weight"],
             fallback=model_cfg["model"]["fallback"],
             fallback_weights=resolve_prior_weights(model_cfg, factor_weights),
-            shrinkage_ic_weight=resolve_model_shrinkage_config(model_cfg)[0],
-            shrinkage_baseline_weight=resolve_model_shrinkage_config(model_cfg)[1],
+            shrinkage_ic_weight=common_shrinkage_ic_weight,
+            shrinkage_baseline_weight=common_shrinkage_baseline_weight,
         )
 
         for framework in FRAMEWORKS:
@@ -256,8 +268,8 @@ def main() -> None:
         negative_prediction_weight=random_forest_ic_cfg["model"]["negative_prediction_weight"],
         fallback=random_forest_ic_cfg["model"]["fallback"],
         fallback_weights=resolve_prior_weights(random_forest_ic_cfg, factor_weights),
-        shrinkage_ic_weight=resolve_model_shrinkage_config(random_forest_ic_cfg)[0],
-        shrinkage_baseline_weight=resolve_model_shrinkage_config(random_forest_ic_cfg)[1],
+        shrinkage_ic_weight=common_shrinkage_ic_weight,
+        shrinkage_baseline_weight=common_shrinkage_baseline_weight,
     )
 
     for framework in FRAMEWORKS:
@@ -297,8 +309,8 @@ def main() -> None:
         negative_prediction_weight=xgboost_ic_cfg["model"]["negative_prediction_weight"],
         fallback=xgboost_ic_cfg["model"]["fallback"],
         fallback_weights=resolve_prior_weights(xgboost_ic_cfg, factor_weights),
-        shrinkage_ic_weight=resolve_model_shrinkage_config(xgboost_ic_cfg)[0],
-        shrinkage_baseline_weight=resolve_model_shrinkage_config(xgboost_ic_cfg)[1],
+        shrinkage_ic_weight=common_shrinkage_ic_weight,
+        shrinkage_baseline_weight=common_shrinkage_baseline_weight,
     )
 
     for framework in FRAMEWORKS:
@@ -378,6 +390,10 @@ def main() -> None:
             row["model"] = model_name
             sensitivity_records.append(row)
     save_framework_long(sensitivity_records, "holding_buffer_sensitivity_metrics.csv")
+    print(
+        "Applied selected common shrinkage to turnover-framework backtests: "
+        f"ic_weight={common_shrinkage_ic_weight:.4f}, baseline_weight={common_shrinkage_baseline_weight:.4f}"
+    )
 
 
 if __name__ == "__main__":
