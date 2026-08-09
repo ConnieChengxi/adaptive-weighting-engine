@@ -18,6 +18,7 @@ TABLES_DIR = ROOT / "outputs" / "tables"
 FIGURES_DIR = ROOT / "outputs" / "figures"
 MAIN_FRAMEWORK = "holding_buffer_top6"
 MAIN_RESULT_PREFIX = f"common_shrinkage_{MAIN_FRAMEWORK}"
+COMMON_SHRINKAGE_CONCLUSION_PATH = ROOT / "outputs" / "tables" / "table_sh4_common_shrinkage_selection_conclusion.csv"
 
 MAIN_MODELS = ["fixed_weight", "rolling_ic", "ridge_ic", "lasso_ic", "elastic_net_ic", "random_forest_ic", "xgboost_ic"]
 MODEL_LABELS = {
@@ -62,6 +63,11 @@ def main_result_backtest_name(model_name: str, artifact: str) -> str:
     return f"{MAIN_RESULT_PREFIX}_{model_name}_{artifact}.csv"
 
 
+def load_common_window() -> tuple[pd.Timestamp, pd.Timestamp]:
+    summary = pd.read_csv(COMMON_SHRINKAGE_CONCLUSION_PATH).iloc[0]
+    return pd.Timestamp(summary["common_window_start"]), pd.Timestamp(summary["common_window_end"])
+
+
 def load_selection_frame(model_name: str) -> pd.DataFrame:
     frame = pd.read_csv(BACKTEST_DIR / main_result_backtest_name(model_name, "selections"), parse_dates=["Date"])
     if model_name == "fixed_weight":
@@ -71,12 +77,18 @@ def load_selection_frame(model_name: str) -> pd.DataFrame:
 
 
 def load_weight_history_frame(model_name: str) -> pd.DataFrame:
+    common_window_start, common_window_end = load_common_window()
     if model_name == "fixed_weight":
         dates = pd.read_csv(BACKTEST_DIR / main_result_backtest_name("fixed_weight", "selections"), usecols=["Date"]).drop_duplicates()
+        dates["Date"] = pd.to_datetime(dates["Date"])
+        dates = dates[(dates["Date"] >= common_window_start) & (dates["Date"] <= common_window_end)].copy()
         for weight_column, value in STATIC_WEIGHTS.items():
             dates[weight_column] = value
         return dates
-    return pd.read_csv(BACKTEST_DIR / main_result_backtest_name(model_name, "weight_history"), parse_dates=["Date"])
+    frame = pd.read_csv(BACKTEST_DIR / main_result_backtest_name(model_name, "weight_history"), parse_dates=["Date"])
+    frame = frame[(frame["Date"] >= common_window_start) & (frame["Date"] <= common_window_end)].copy()
+    assert frame["Date"].nunique() == 294, f"{model_name} weight history should contain 294 common-window months"
+    return frame
 
 
 def build_score_contribution_long_frame() -> pd.DataFrame:

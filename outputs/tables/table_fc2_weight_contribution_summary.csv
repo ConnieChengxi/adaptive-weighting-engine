@@ -1,19 +1,19 @@
 Model,Dimension,Mean weight,Weight standard deviation,Share of months as unique largest weight
-A1,Market-adjusted relative performance,0.3244,0.1868,21.75%
-A1,Implementation friction,0.3507,0.1994,29.31%
-A1,Sector-specific uncertainty,0.3250,0.1724,26.28%
-L1,Market-adjusted relative performance,0.3485,0.1966,25.98%
-L1,Implementation friction,0.3275,0.1803,20.54%
-L1,Sector-specific uncertainty,0.3239,0.1640,21.75%
-L2,Market-adjusted relative performance,0.3523,0.1978,25.38%
-L2,Implementation friction,0.3294,0.1817,21.15%
-L2,Sector-specific uncertainty,0.3183,0.1615,20.85%
-L3,Market-adjusted relative performance,0.3524,0.1984,25.68%
-L3,Implementation friction,0.3294,0.1822,20.85%
-L3,Sector-specific uncertainty,0.3182,0.1621,20.85%
-T1,Market-adjusted relative performance,0.3197,0.1770,19.94%
-T1,Implementation friction,0.3334,0.1715,26.28%
-T1,Sector-specific uncertainty,0.3469,0.1639,25.68%
-T2,Market-adjusted relative performance,0.3307,0.1926,22.66%
-T2,Implementation friction,0.3332,0.1806,25.08%
-T2,Sector-specific uncertainty,0.3361,0.1775,26.28%
+A1,Market-adjusted relative performance,0.3239,0.1979,24.49%
+A1,Implementation friction,0.3516,0.2105,32.65%
+A1,Sector-specific uncertainty,0.3245,0.1826,29.59%
+L1,Market-adjusted relative performance,0.3511,0.2082,29.25%
+L1,Implementation friction,0.3254,0.1898,22.79%
+L1,Sector-specific uncertainty,0.3234,0.1737,24.49%
+L2,Market-adjusted relative performance,0.3553,0.2094,28.57%
+L2,Implementation friction,0.3276,0.1914,23.47%
+L2,Sector-specific uncertainty,0.3171,0.1710,23.47%
+L3,Market-adjusted relative performance,0.3555,0.2100,28.91%
+L3,Implementation friction,0.3276,0.1920,23.13%
+L3,Sector-specific uncertainty,0.3169,0.1716,23.47%
+T1,Market-adjusted relative performance,0.3187,0.1875,22.45%
+T1,Implementation friction,0.3320,0.1805,29.25%
+T1,Sector-specific uncertainty,0.3493,0.1734,28.91%
+T2,Market-adjusted relative performance,0.3311,0.2041,25.51%
+T2,Implementation friction,0.3329,0.1916,28.23%
+T2,Sector-specific uncertainty,0.3360,0.1882,29.25%

@@ -311,7 +311,9 @@ def format_publication_table_file(path: Path) -> None:
         if not pd.api.types.is_numeric_dtype(series):
             continue
         lower = column.lower()
-        if "month" in lower or "number of" in lower or lower.endswith("months"):
+        if "effective number" in lower:
+            formatted[column] = series.map(lambda value: "" if pd.isna(value) else f"{value:.4f}")
+        elif "month" in lower or "number of" in lower or lower.endswith("months"):
             formatted[column] = series.round(0).astype("Int64")
         elif any(token in lower for token in ["share", "return", "volatility", "drawdown", "turnover", "rate", "spread", "probability"]):
             formatted[column] = series.map(lambda value: "" if pd.isna(value) else f"{value:.4f}")
@@ -2208,13 +2210,17 @@ def make_figure_a1_full_window_and_test_rebased() -> None:
 
 
 def make_figure_2_rolling_weight_evolution() -> None:
+    summary = load_table_csv("table_sh4_common_shrinkage_selection_conclusion.csv").iloc[0]
+    common_start = pd.Timestamp(summary["common_window_start"])
+    common_end = pd.Timestamp(summary["common_window_end"])
     weights = load_csv(main_result_backtest_name("rolling_ic", "weight_history"), parse_dates=["Date"])
+    weights = weights[(weights["Date"] >= common_start) & (weights["Date"] <= common_end)].copy()
     smoothed = weights.copy()
     weight_columns = list(FACTOR_LABELS.keys())
     display_labels = [FACTOR_LABELS[column] for column in weight_columns]
     color_map = ["#4E79A7", "#F28E2B", "#59A14F"]
     for column in weight_columns:
-        smoothed[column] = smoothed[column].rolling(12, min_periods=1).mean()
+        smoothed[column] = smoothed[column].rolling(12, min_periods=12).mean()
 
     fig, ax = plt.subplots(figsize=(11.4, 5.0))
     ax.stackplot(
@@ -2250,6 +2256,8 @@ def make_figure_3_xgboost_concentration() -> None:
     summary = load_table_csv("table_sh4_common_shrinkage_selection_conclusion.csv").iloc[0]
     window_start = pd.Timestamp(summary["common_window_start"])
     window_end = pd.Timestamp(summary["common_window_end"])
+    baseline_weight = float(summary["selected_baseline_weight"])
+    model_weight = float(summary["selected_ic_weight"])
     weights = load_csv(main_result_backtest_name("xgboost_ic", "weight_history"), parse_dates=["Date"])
     weights = weights[(weights["Date"] >= window_start) & (weights["Date"] <= window_end)].copy()
     weight_columns = list(FACTOR_LABELS)
@@ -2258,7 +2266,7 @@ def make_figure_3_xgboost_concentration() -> None:
     pct_gt_50 = (weights["max_dimension_weight"] > 0.50).mean()
     pct_gt_60 = (weights["max_dimension_weight"] > 0.60).mean()
     moderate_reference = 0.50
-    theoretical_cap = 2.0 / 3.0
+    theoretical_cap = model_weight + baseline_weight / 3.0
 
     plt.figure(figsize=(11, 6.5))
     plt.plot(weights["Date"], weights["max_dimension_weight"], color=MODEL_COLORS["xgboost_ic"], linewidth=2.2)
@@ -2283,7 +2291,8 @@ def make_figure_3_xgboost_concentration() -> None:
     annotation = (
         f"Mean maximum dimension weight: {mean_max:.2f}\n"
         f"Months with max weight > 0.50: {pct_gt_50 * 100:.1f}%\n"
-        f"Months with max weight > 0.60: {pct_gt_60 * 100:.1f}%"
+        f"Months with max weight > 0.60: {pct_gt_60 * 100:.1f}%\n"
+        f"Theoretical post-shrinkage cap: {theoretical_cap:.4f}"
     )
     plt.text(
         0.02,
