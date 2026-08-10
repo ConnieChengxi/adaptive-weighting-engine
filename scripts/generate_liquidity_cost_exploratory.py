@@ -337,7 +337,7 @@ def make_figure_i2(f1: pd.DataFrame, f3: pd.DataFrame) -> None:
                 plot_df["ci_upper"] - plot_df["mean_unit_cost"],
             ]
         )
-        ax.bar(
+        bars = ax.bar(
             plot_df["quintile"].astype(str),
             plot_df["mean_unit_cost"],
             color=color,
@@ -346,6 +346,22 @@ def make_figure_i2(f1: pd.DataFrame, f3: pd.DataFrame) -> None:
             capsize=4,
             ecolor="#333333",
         )
+        max_upper = float(plot_df["ci_upper"].max()) if not plot_df.empty else 0.0
+        label_offset = max(max_upper * 0.015, 0.2)
+        for bar, mean_value, ci_upper in zip(bars, plot_df["mean_unit_cost"], plot_df["ci_upper"]):
+            x_pos = bar.get_x() + bar.get_width() / 2.0
+            y_pos = float(ci_upper) + label_offset
+            ax.text(
+                x_pos,
+                y_pos,
+                f"{float(mean_value):.2f}",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+                color="#222222",
+            )
+        if not plot_df.empty:
+            ax.set_ylim(top=max_upper + 3.5 * label_offset)
         ax.set_title(SETTING_PANEL_TITLES[setting_code], fontsize=12)
         ax.set_xlabel("Within-setting Amihud quintile")
         ax.grid(axis="y", alpha=0.2)
