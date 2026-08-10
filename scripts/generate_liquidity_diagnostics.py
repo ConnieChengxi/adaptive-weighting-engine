@@ -33,10 +33,12 @@ RAW_DIR = ROOT / "data" / "raw"
 TABLES_DIR = ROOT / "outputs" / "tables"
 FIGURES_DIR = ROOT / "outputs" / "figures"
 BACKTEST_DIR = ROOT / "outputs" / "backtests"
+APPENDIX_I_LIQUIDITY_LOOKUP_PATH = BACKTEST_DIR / "baseline_equal_weight_benchmark_selections.csv"
 MAIN_FRAMEWORK = "holding_buffer_top6"
 MAIN_RESULT_PREFIX = f"common_shrinkage_{MAIN_FRAMEWORK}"
 PRE_TEST_SIGNAL_END = pd.Timestamp("2021-05-31")
 PRE_TEST_OUTCOME_END = pd.Timestamp("2021-06-30")
+APPENDIX_I_MODEL_ORDER = ["S1", "A1", "L1", "L2", "L3", "T1", "T2"]
 
 
 LIQUIDITY_CANDIDATE_LABELS = {
@@ -447,6 +449,30 @@ def build_transaction_cost_linkage_frame() -> pd.DataFrame:
     return build_transaction_cost_linkage_frame_for_source("baseline")
 
 
+def load_appendix_i_liquidity_lookup() -> pd.DataFrame:
+    lookup = pd.read_csv(
+        APPENDIX_I_LIQUIDITY_LOOKUP_PATH,
+        usecols=["Date", "symbol", "liquidity_1m", "corwin_schultz_spread"],
+        parse_dates=["Date"],
+    ).sort_values(["Date", "symbol"]).reset_index(drop=True)
+
+    duplicate_mask = lookup.duplicated(subset=["Date", "symbol"])
+    if duplicate_mask.any():
+        duplicated_rows = lookup.loc[duplicate_mask, ["Date", "symbol"]].head().to_dict("records")
+        raise ValueError(f"Appendix I liquidity lookup has duplicate Date-symbol rows: {duplicated_rows}")
+
+    monthly_symbol_counts = lookup.groupby("Date")["symbol"].nunique()
+    if not monthly_symbol_counts.eq(9).all():
+        bad_counts = monthly_symbol_counts.loc[~monthly_symbol_counts.eq(9)].head().to_dict()
+        raise ValueError(f"Appendix I liquidity lookup must contain 9 ETFs per month: {bad_counts}")
+
+    if lookup[["liquidity_1m", "corwin_schultz_spread"]].isna().any().any():
+        missing_counts = lookup[["liquidity_1m", "corwin_schultz_spread"]].isna().sum().to_dict()
+        raise ValueError(f"Appendix I liquidity lookup contains missing values: {missing_counts}")
+
+    return lookup
+
+
 def transaction_cost_linkage_model_map(source: str = "baseline") -> dict[str, tuple[str, str]]:
     source = source.lower()
     if source not in {"baseline", "main_result"}:
@@ -497,16 +523,20 @@ def transaction_cost_linkage_model_map(source: str = "baseline") -> dict[str, tu
 
 def build_transaction_cost_linkage_frame_for_source(source: str = "baseline") -> pd.DataFrame:
     model_map = transaction_cost_linkage_model_map(source)
+    execution_setting = "F1" if source.lower() == "baseline" else "F3"
 
     frames: list[pd.DataFrame] = []
     for model_code, (selection_name, returns_name) in model_map.items():
         selections = pd.read_csv(BACKTEST_DIR / selection_name, parse_dates=["Date"])
         portfolio_returns = pd.read_csv(BACKTEST_DIR / returns_name, parse_dates=["Date"])
+        if selections[["liquidity_1m", "corwin_schultz_spread"]].isna().any().any():
+            missing_counts = selections[["liquidity_1m", "corwin_schultz_spread"]].isna().sum().to_dict()
+            raise ValueError(f"{selection_name} contains missing Appendix I liquidity inputs: {missing_counts}")
         monthly = (
             selections.groupby("Date")
             .agg(
-                avg_selected_winsorised_amihud=("liquidity_1m", "mean"),
-                avg_selected_spread=("corwin_schultz_spread", "mean"),
+                amihud=("liquidity_1m", "mean"),
+                spread=("corwin_schultz_spread", "mean"),
                 n_selected=("symbol", "count"),
             )
             .reset_index()
@@ -516,12 +546,13 @@ def build_transaction_cost_linkage_frame_for_source(source: str = "baseline") ->
             on="Date",
             how="inner",
         )
-        merged["effective_cost_per_unit_turnover"] = np.where(
+        merged["effective_cost_bps"] = np.where(
             merged["turnover"] > 0,
-            merged["transaction_cost_rate"] / merged["turnover"],
+            merged["transaction_cost_rate"] / merged["turnover"] * 10000.0,
             np.nan,
         )
-        merged["net_cost_drag"] = merged["portfolio_return"] - merged["net_portfolio_return"]
+        merged["log10_amihud"] = np.log10(merged["amihud"].clip(lower=1e-16))
+        merged["execution_setting"] = execution_setting
         merged["model"] = model_code
         frames.append(merged)
     return pd.concat(frames, ignore_index=True).sort_values(["model", "Date"]).reset_index(drop=True)
@@ -529,11 +560,8 @@ def build_transaction_cost_linkage_frame_for_source(source: str = "baseline") ->
 
 def build_traded_leg_linkage_frame_for_source(source: str = "main_result") -> pd.DataFrame:
     model_map = transaction_cost_linkage_model_map(source)
-    monthly_panel = pd.read_csv(
-        MONTHLY_PANEL_PATH,
-        usecols=["Date", "symbol", "liquidity_1m", "corwin_schultz_spread"],
-        parse_dates=["Date"],
-    )
+    liquidity_lookup = load_appendix_i_liquidity_lookup()
+    execution_setting = "F3" if source.lower() == "main_result" else "F1"
 
     frames: list[pd.DataFrame] = []
     for model_code, (selection_name, returns_name) in model_map.items():
@@ -555,27 +583,28 @@ def build_traded_leg_linkage_frame_for_source(source: str = "main_result") -> pd
         )
 
         traded = traded_long.merge(
-            monthly_panel,
+            liquidity_lookup,
             on=["Date", "symbol"],
             how="left",
+            validate="many_to_one",
         )
-        traded = traded.dropna(subset=["liquidity_1m", "corwin_schultz_spread"])
-        if traded.empty:
-            continue
+        if traded[["liquidity_1m", "corwin_schultz_spread"]].isna().any().any():
+            missing_rows = traded.loc[
+                traded[["liquidity_1m", "corwin_schultz_spread"]].isna().any(axis=1),
+                ["Date", "symbol", "traded_weight"],
+            ].head()
+            raise ValueError(
+                f"Appendix I traded-leg merge produced missing liquidity inputs for {selection_name}: "
+                f"{missing_rows.to_dict('records')}"
+            )
 
         monthly_rows: list[dict[str, object]] = []
         for date, group in traded.groupby("Date", sort=True):
             monthly_rows.append(
                 {
                     "Date": date,
-                    "avg_traded_leg_winsorised_amihud": float(group["liquidity_1m"].mean()),
-                    "turnover_weighted_traded_leg_winsorised_amihud": float(
-                        np.average(group["liquidity_1m"], weights=group["traded_weight"])
-                    ),
-                    "avg_traded_leg_spread": float(group["corwin_schultz_spread"].mean()),
-                    "turnover_weighted_traded_leg_spread": float(
-                        np.average(group["corwin_schultz_spread"], weights=group["traded_weight"])
-                    ),
+                    "amihud": float(group["liquidity_1m"].mean()),
+                    "spread": float(group["corwin_schultz_spread"].mean()),
                     "n_traded_symbols": int(group["symbol"].nunique()),
                     "total_traded_weight": float(group["traded_weight"].sum()),
                 }
@@ -587,12 +616,13 @@ def build_traded_leg_linkage_frame_for_source(source: str = "main_result") -> pd
             on="Date",
             how="inner",
         )
-        merged["effective_cost_per_unit_turnover"] = np.where(
+        merged["effective_cost_bps"] = np.where(
             merged["turnover"] > 0,
-            merged["transaction_cost_rate"] / merged["turnover"],
+            merged["transaction_cost_rate"] / merged["turnover"] * 10000.0,
             np.nan,
         )
-        merged["net_cost_drag"] = merged["portfolio_return"] - merged["net_portfolio_return"]
+        merged["log10_amihud"] = np.log10(merged["amihud"].clip(lower=1e-16))
+        merged["execution_setting"] = execution_setting
         merged["model"] = model_code
         frames.append(merged)
 

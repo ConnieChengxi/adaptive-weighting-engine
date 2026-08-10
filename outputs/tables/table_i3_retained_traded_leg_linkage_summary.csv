@@ -1,9 +1,0 @@
-Model,Observations,Spearman corr with traded-leg Amihud,Spearman corr with traded-leg spread,Mean effective cost per turnover (bps)
-Pooled,366,0.159,1.0,15.885
-A1,46,0.333,1.0,15.867
-L1,53,0.048,1.0,16.046
-L2,55,0.225,1.0,16.097
-L3,55,0.223,1.0,16.122
-S1,37,0.045,1.0,13.124
-T1,56,0.169,1.0,16.806
-T2,64,0.202,1.0,16.167

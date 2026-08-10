@@ -1,8 +1,0 @@
-Item,(1) Effective cost per unit turnover (bps),(2) Transaction cost rate (bps)
-log10(average selected winsorised Amihud),2.335,1.203
-,(<0.001),(<0.001)
-Turnover,-,15.061
-,,(<0.001)
-Observations,"1,362","2,058"
-Month clusters,265,294
-$R^2$,0.069,0.622

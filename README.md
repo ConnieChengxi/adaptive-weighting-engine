@@ -140,7 +140,19 @@ python3 scripts/generate_factor_contribution_assets.py
 python3 scripts/generate_liquidity_cost_exploratory.py
 ```
 
-This script generates the Appendix I exploratory linkage tables and figures, including the clustered-by-month regression summary.
+This script generates the final Appendix I diagnostic assets. It compares two execution settings:
+
+- `F1`: baseline selections with no additional turnover control
+- `F3`: retained common-shrinkage Top-6 holding-buffer traded legs
+
+The script writes:
+
+- `outputs/tables/table_i1_execution_setting_liquidity_linkage.csv`
+- `outputs/tables/table_i2_traded_leg_model_summary.csv`
+- `outputs/figures/figure_i1_amihud_vs_effective_cost_by_setting.png`
+- `outputs/figures/figure_i2_amihud_quintile_unit_cost_by_setting.png`
+
+The F3 traded-leg diagnostic is rebuilt from `outputs/backtests/baseline_equal_weight_benchmark_selections.csv`, so it can be reproduced from the backtest outputs without relying on `data/processed/monthly_factor_panel.csv`.
 
 ### 8. Compile report tables and figures
 

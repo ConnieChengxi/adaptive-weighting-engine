@@ -6,7 +6,7 @@ import sys
 
 import numpy as np
 import pandas as pd
-from scipy.stats import t as student_t
+from scipy.stats import spearmanr, t as student_t
 
 ROOT = Path(__file__).resolve().parents[1]
 os.environ.setdefault("MPLCONFIGDIR", str(ROOT / "outputs" / "logs" / "mplconfig"))
@@ -14,12 +14,12 @@ os.environ.setdefault("MPLCONFIGDIR", str(ROOT / "outputs" / "logs" / "mplconfig
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.generate_liquidity_diagnostics import (
+from scripts.generate_liquidity_diagnostics import (  # noqa: E402
+    APPENDIX_I_MODEL_ORDER,
     build_transaction_cost_linkage_frame_for_source,
     build_traded_leg_linkage_frame_for_source,
 )
@@ -28,27 +28,36 @@ from scripts.generate_liquidity_diagnostics import (
 TABLES_DIR = ROOT / "outputs" / "tables"
 FIGURES_DIR = ROOT / "outputs" / "figures"
 
-MODEL_PALETTE = {
-    "S1": "#4E79A7",
-    "A1": "#F28E2B",
-    "L1": "#59A14F",
-    "L2": "#E15759",
-    "L3": "#76B7B2",
-    "T1": "#B07AA1",
-    "T2": "#EDC948",
+TABLE_I1_PATH = TABLES_DIR / "table_i1_execution_setting_liquidity_linkage.csv"
+TABLE_I2_PATH = TABLES_DIR / "table_i2_traded_leg_model_summary.csv"
+FIGURE_I1_PATH = FIGURES_DIR / "figure_i1_amihud_vs_effective_cost_by_setting.png"
+FIGURE_I2_PATH = FIGURES_DIR / "figure_i2_amihud_quintile_unit_cost_by_setting.png"
+
+LEGACY_OUTPUTS = [
+    TABLES_DIR / "table_i1_liquidity_cost_exploratory_regressions.csv",
+    TABLES_DIR / "table_i2_log_amihud_cost_per_turnover_quintiles.csv",
+    TABLES_DIR / "table_i3_retained_traded_leg_linkage_summary.csv",
+    TABLES_DIR / "table_i1_baseline_liquidity_cost_linkage_appendix.csv",
+    FIGURES_DIR / "figure_i1_log_amihud_vs_cost_per_turnover.png",
+    FIGURES_DIR / "figure_i2_log_amihud_quintile_cost_per_turnover.png",
+]
+
+SETTING_LABELS = {
+    "F1": "Average selected Amihud",
+    "F3": "Average traded-leg Amihud",
 }
 
+SETTING_PANEL_TITLES = {
+    "F1": "Panel A. F1 selected-set Amihud",
+    "F3": "Panel B. F3 traded-leg Amihud",
+}
 
-def safe_log10(series: pd.Series, floor: float = 1e-16) -> pd.Series:
-    return np.log10(series.clip(lower=floor))
+SETTING_COLORS = {
+    "F1": "#4E79A7",
+    "F3": "#E15759",
+}
 
-
-def prepare_frame() -> pd.DataFrame:
-    frame = build_transaction_cost_linkage_frame_for_source("baseline").copy()
-    frame["log10_avg_selected_winsorised_amihud"] = safe_log10(frame["avg_selected_winsorised_amihud"])
-    frame["effective_cost_per_unit_turnover_bps"] = frame["effective_cost_per_unit_turnover"] * 10000.0
-    frame["transaction_cost_rate_bps"] = frame["transaction_cost_rate"] * 10000.0
-    return frame
+MODEL_ORDER_WITH_POOLED = ["Pooled", *APPENDIX_I_MODEL_ORDER]
 
 
 def fit_ols_with_clustered_se(
@@ -56,16 +65,19 @@ def fit_ols_with_clustered_se(
     y_col: str,
     x_cols: list[str],
     cluster_col: str,
-) -> tuple[pd.Series, pd.Series, float, int, int]:
+) -> tuple[pd.Series, pd.Series, pd.Series, float, int, int]:
     sample = data[[cluster_col, y_col, *x_cols]].dropna().copy()
+    if sample.empty:
+        raise ValueError(f"No valid rows for clustered regression on {y_col}")
+
     y = sample[y_col].to_numpy(dtype=float)
-    x = sample[x_cols].to_numpy(dtype=float)
+    x = sample[x_cols].to_numpy(dtype=float) if x_cols else np.empty((len(sample), 0))
     x = np.column_stack([np.ones(len(sample)), x])
 
     beta, *_ = np.linalg.lstsq(x, y, rcond=None)
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         fitted = x @ beta
-    resid = y - fitted
+        resid = y - fitted
     n_obs, n_params = x.shape
     df_resid = n_obs - n_params
 
@@ -104,6 +116,7 @@ def fit_ols_with_clustered_se(
     coef_index = ["Intercept", *x_cols]
     return (
         pd.Series(beta, index=coef_index),
+        pd.Series(se, index=coef_index),
         pd.Series(p_vals, index=coef_index),
         float(r2),
         int(n_obs),
@@ -111,384 +124,256 @@ def fit_ols_with_clustered_se(
     )
 
 
-def build_regression_summary(frame: pd.DataFrame) -> pd.DataFrame:
-    specs = [
-        {
-            "outcome": "Effective cost per unit turnover (bps)",
-            "y_col": "effective_cost_per_unit_turnover_bps",
-            "specification": "Log-linear",
-            "x_cols": ["log10_avg_selected_winsorised_amihud"],
-        },
-        {
-            "outcome": "Transaction cost rate (bps)",
-            "y_col": "transaction_cost_rate_bps",
-            "specification": "Log-linear",
-            "x_cols": ["log10_avg_selected_winsorised_amihud"],
-        },
-        {
-            "outcome": "Transaction cost rate (bps)",
-            "y_col": "transaction_cost_rate_bps",
-            "specification": "Log-linear + turnover control",
-            "x_cols": ["log10_avg_selected_winsorised_amihud", "turnover"],
-        },
-    ]
-
-    working = frame.copy()
-    working["log10_avg_selected_winsorised_amihud_sq"] = (
-        working["log10_avg_selected_winsorised_amihud"] ** 2
+def clustered_mean_ci(
+    data: pd.DataFrame,
+    value_col: str,
+    cluster_col: str,
+    confidence: float = 0.95,
+) -> tuple[float, float, float, int, int]:
+    coefs, ses, _, _, n_obs, n_clusters = fit_ols_with_clustered_se(
+        data,
+        y_col=value_col,
+        x_cols=[],
+        cluster_col=cluster_col,
     )
+    mean_value = float(coefs["Intercept"])
+    se_value = float(ses["Intercept"])
+    dof = max(n_clusters - 1, 1)
+    t_crit = float(student_t.ppf((1.0 + confidence) / 2.0, df=dof))
+    lower = mean_value - t_crit * se_value
+    upper = mean_value + t_crit * se_value
+    return mean_value, lower, upper, n_obs, n_clusters
 
+
+def format_p_value(value: float) -> str:
+    if pd.isna(value):
+        return ""
+    return "<0.001" if value < 0.001 else f"{value:.3f}"
+
+
+def clean_legacy_outputs() -> None:
+    for path in LEGACY_OUTPUTS:
+        if path.exists():
+            path.unlink()
+
+
+def build_appendix_i_frames() -> tuple[pd.DataFrame, pd.DataFrame]:
+    f1 = build_transaction_cost_linkage_frame_for_source("baseline").copy()
+    f3 = build_traded_leg_linkage_frame_for_source("main_result").copy()
+
+    f1 = f1.loc[f1["turnover"] > 0].copy()
+    f3 = f3.loc[f3["turnover"] > 0].copy()
+
+    required_cols = [
+        "Date",
+        "model",
+        "execution_setting",
+        "amihud",
+        "log10_amihud",
+        "turnover",
+        "transaction_cost_rate",
+        "effective_cost_bps",
+    ]
+    for name, frame in [("F1", f1), ("F3", f3)]:
+        missing = [col for col in required_cols if col not in frame.columns]
+        if missing:
+            raise ValueError(f"{name} frame is missing required columns: {missing}")
+        if frame[required_cols].drop(columns=["execution_setting"]).isna().any().any():
+            na_counts = frame[required_cols].drop(columns=["execution_setting"]).isna().sum()
+            raise ValueError(f"{name} frame contains missing values: {na_counts[na_counts > 0].to_dict()}")
+
+    return f1, f3
+
+
+def build_table_i1(f1: pd.DataFrame, f3: pd.DataFrame) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
-    for spec in specs:
-        coefs, p_vals, r2, n_obs, n_clusters = fit_ols_with_clustered_se(
-            working,
-            spec["y_col"],
-            spec["x_cols"],
+    for setting_code, frame in [("F1", f1), ("F3", f3)]:
+        sample = frame.dropna(subset=["log10_amihud", "effective_cost_bps"]).copy()
+        spearman_rho = float(spearmanr(sample["amihud"], sample["effective_cost_bps"]).statistic)
+        coefs, _, p_vals, r2, n_obs, n_clusters = fit_ols_with_clustered_se(
+            sample,
+            y_col="effective_cost_bps",
+            x_cols=["log10_amihud"],
             cluster_col="Date",
         )
-        row = {
-            "Outcome": spec["outcome"],
-            "Specification": spec["specification"],
-            "Observations": n_obs,
-            "Month clusters": n_clusters,
-            "R-squared": r2,
-            "Intercept (bps)": coefs.get("Intercept", np.nan),
-            "Intercept p-value": p_vals.get("Intercept", np.nan),
-            "Log-Amihud coefficient": coefs.get("log10_avg_selected_winsorised_amihud", np.nan),
-            "Log-Amihud p-value": p_vals.get("log10_avg_selected_winsorised_amihud", np.nan),
-            "Turnover coefficient": coefs.get("turnover", np.nan),
-            "Turnover p-value": p_vals.get("turnover", np.nan),
-        }
-        rows.append(row)
-
-    summary = pd.DataFrame(rows)
-    for column in [
-        "R-squared",
-        "Intercept (bps)",
-        "Log-Amihud coefficient",
-        "Turnover coefficient",
-    ]:
-        summary[column] = summary[column].round(3)
-    for column in [
-        "Intercept p-value",
-        "Log-Amihud p-value",
-        "Turnover p-value",
-    ]:
-        summary[column] = summary[column].map(
-            lambda value: "" if pd.isna(value) else ("<0.001" if value < 0.001 else f"{value:.3f}")
+        rows.append(
+            {
+                "Setting": setting_code,
+                "Predictor": SETTING_LABELS[setting_code],
+                "N": n_obs,
+                "Months": n_clusters,
+                "Spearman rho": round(spearman_rho, 3),
+                "Beta": round(float(coefs["log10_amihud"]), 3),
+                "Clustered p": format_p_value(float(p_vals["log10_amihud"])),
+                "R-squared": round(r2, 3),
+            }
         )
-    return summary
+    return pd.DataFrame(rows)
 
 
-def build_quantile_summary(
-    frame: pd.DataFrame,
-    n_bins: int = 5,
-) -> pd.DataFrame:
-    sample = frame.dropna(
-        subset=[
-            "log10_avg_selected_winsorised_amihud",
-            "effective_cost_per_unit_turnover_bps",
-        ]
-    ).copy()
-    sample["Log-Amihud quintile"] = pd.qcut(
-        sample["log10_avg_selected_winsorised_amihud"],
-        q=n_bins,
-        labels=[f"Q{i}" for i in range(1, n_bins + 1)],
-        duplicates="drop",
-    )
-    summary = (
-        sample.groupby("Log-Amihud quintile", observed=False)
-        .agg(
-            observations=("effective_cost_per_unit_turnover_bps", "size"),
-            mean_log10_amihud=("log10_avg_selected_winsorised_amihud", "mean"),
-            mean_cost_per_turnover_bps=("effective_cost_per_unit_turnover_bps", "mean"),
-            mean_transaction_cost_rate_bps=("transaction_cost_rate_bps", "mean"),
-            mean_turnover=("turnover", "mean"),
-            sd_cost_per_turnover_bps=("effective_cost_per_unit_turnover_bps", "std"),
-        )
-        .reset_index()
-    )
-    summary = summary.rename(
-        columns={
-            "observations": "Observations",
-            "mean_log10_amihud": "Mean log10(Amihud)",
-            "mean_cost_per_turnover_bps": "Mean effective cost per unit turnover (bps)",
-            "mean_transaction_cost_rate_bps": "Mean transaction cost rate (bps)",
-            "mean_turnover": "Mean turnover",
-            "sd_cost_per_turnover_bps": "SD of effective cost per unit turnover (bps)",
-        }
-    )
-    for column in [
-        "Mean log10(Amihud)",
-        "Mean effective cost per unit turnover (bps)",
-        "Mean transaction cost rate (bps)",
-        "Mean turnover",
-        "SD of effective cost per unit turnover (bps)",
-    ]:
-        summary[column] = summary[column].round(3)
-    return summary
-
-
-def build_retained_traded_leg_summary() -> pd.DataFrame:
-    frame = build_traded_leg_linkage_frame_for_source("main_result")
+def build_table_i2(f3: pd.DataFrame) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
-    for model_name, sample in [("Pooled", frame)] + list(frame.groupby("model", sort=True)):
-        sample = sample.dropna(subset=["effective_cost_per_unit_turnover"]).copy()
+    grouped = [("Pooled", f3)] + [(model, grp.copy()) for model, grp in f3.groupby("model", sort=False)]
+    for model_name, frame in grouped:
+        sample = frame.dropna(subset=["amihud", "effective_cost_bps"]).copy()
+        rho = float(spearmanr(sample["amihud"], sample["effective_cost_bps"]).statistic) if not sample.empty else np.nan
         rows.append(
             {
                 "Model": model_name,
-                "Observations": int(len(sample)),
-                "Spearman corr with traded-leg Amihud": (
-                    float(
-                        sample["avg_traded_leg_winsorised_amihud"].corr(
-                            sample["effective_cost_per_unit_turnover"],
-                            method="spearman",
-                        )
-                    )
-                    if not sample.empty
-                    else np.nan
-                ),
-                "Spearman corr with traded-leg spread": (
-                    float(
-                        sample["avg_traded_leg_spread"].corr(
-                            sample["effective_cost_per_unit_turnover"],
-                            method="spearman",
-                        )
-                    )
-                    if not sample.empty
-                    else np.nan
-                ),
-                "Mean effective cost per turnover (bps)": (
-                    float(sample["effective_cost_per_unit_turnover"].mean())
-                    * 10000.0 if not sample.empty else np.nan
-                ),
+                "N": int(len(sample)),
+                "Spearman rho": round(rho, 3) if pd.notna(rho) else np.nan,
+                "Mean unit cost": round(float(sample["effective_cost_bps"].mean()), 3) if not sample.empty else np.nan,
             }
         )
-    summary = pd.DataFrame(rows)
-    for column in [
-        "Spearman corr with traded-leg Amihud",
-        "Spearman corr with traded-leg spread",
-        "Mean effective cost per turnover (bps)",
-    ]:
-        summary[column] = summary[column].round(3)
-    return summary
+    table = pd.DataFrame(rows)
+    table["Model"] = pd.Categorical(table["Model"], categories=MODEL_ORDER_WITH_POOLED, ordered=True)
+    table = table.sort_values("Model").reset_index(drop=True)
+    table["Model"] = table["Model"].astype(str)
+    return table
 
 
-def format_observations(series: pd.Series) -> pd.Series:
-    return series.map(lambda value: f"{int(value):,}")
+def make_figure_i1(f1: pd.DataFrame, f3: pd.DataFrame) -> None:
+    fig, axes = plt.subplots(1, 2, figsize=(13.5, 5.8), sharey=True)
 
-
-def build_appendix_ready_regression_table(regression_summary: pd.DataFrame) -> pd.DataFrame:
-    keep_mask = (
-        (
-            regression_summary["Outcome"].eq("Effective cost per unit turnover (bps)")
-            & regression_summary["Specification"].eq("Log-linear")
+    for ax, (setting_code, frame) in zip(axes, [("F1", f1), ("F3", f3)]):
+        sample = frame.dropna(subset=["log10_amihud", "effective_cost_bps"]).copy()
+        color = SETTING_COLORS[setting_code]
+        ax.scatter(
+            sample["log10_amihud"],
+            sample["effective_cost_bps"],
+            alpha=0.55,
+            s=24,
+            color=color,
+            edgecolor="none",
         )
-        | (
-            regression_summary["Outcome"].eq("Transaction cost rate (bps)")
-            & regression_summary["Specification"].eq("Log-linear + turnover control")
+
+        coefs, _, p_vals, _, n_obs, n_clusters = fit_ols_with_clustered_se(
+            sample,
+            y_col="effective_cost_bps",
+            x_cols=["log10_amihud"],
+            cluster_col="Date",
         )
-    )
-    filtered = regression_summary.loc[keep_mask].copy()
-    filtered = filtered[
-        [
-            "Outcome",
-            "Specification",
-            "Log-Amihud coefficient",
-            "Log-Amihud p-value",
-            "Turnover coefficient",
-            "Turnover p-value",
-            "Observations",
-            "Month clusters",
-            "R-squared",
-        ]
-    ]
-    filtered["Observations"] = format_observations(filtered["Observations"])
-    for column in ["Log-Amihud coefficient", "Turnover coefficient", "R-squared"]:
-        filtered[column] = filtered[column].map(
-            lambda value: "" if pd.isna(value) else f"{float(value):.3f}"
+        x_vals = np.linspace(sample["log10_amihud"].min(), sample["log10_amihud"].max(), 100)
+        y_vals = float(coefs["Intercept"]) + float(coefs["log10_amihud"]) * x_vals
+        ax.plot(x_vals, y_vals, color="#222222", linewidth=2.0)
+
+        stats_text = (
+            f"N: {n_obs}\n"
+            f"Months: {n_clusters}\n"
+            f"β: {float(coefs['log10_amihud']):.3f}\n"
+            f"p: {format_p_value(float(p_vals['log10_amihud']))}"
         )
-    for column in ["Log-Amihud p-value", "Turnover p-value"]:
-        filtered[column] = filtered[column].fillna("")
-    filtered = filtered.reset_index(drop=True).fillna("")
+        ax.text(
+            0.03,
+            0.97,
+            stats_text,
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=10,
+            bbox={"facecolor": "white", "edgecolor": "#cccccc", "alpha": 0.95},
+        )
+        ax.set_title(SETTING_PANEL_TITLES[setting_code], fontsize=12)
+        ax.set_xlabel("log10(Amihud)")
+        ax.grid(alpha=0.2)
 
-    spec1 = filtered.iloc[0]
-    spec2 = filtered.iloc[1]
-    wide_rows = [
-        {
-            "Item": r"log10(average selected winsorised Amihud)",
-            "(1) Effective cost per unit turnover (bps)": spec1["Log-Amihud coefficient"],
-            "(2) Transaction cost rate (bps)": spec2["Log-Amihud coefficient"],
-        },
-        {
-            "Item": "",
-            "(1) Effective cost per unit turnover (bps)": f"({spec1['Log-Amihud p-value']})",
-            "(2) Transaction cost rate (bps)": f"({spec2['Log-Amihud p-value']})",
-        },
-        {
-            "Item": "Turnover",
-            "(1) Effective cost per unit turnover (bps)": "-",
-            "(2) Transaction cost rate (bps)": spec2["Turnover coefficient"],
-        },
-        {
-            "Item": "",
-            "(1) Effective cost per unit turnover (bps)": "",
-            "(2) Transaction cost rate (bps)": f"({spec2['Turnover p-value']})",
-        },
-        {
-            "Item": "Observations",
-            "(1) Effective cost per unit turnover (bps)": spec1["Observations"],
-            "(2) Transaction cost rate (bps)": spec2["Observations"],
-        },
-        {
-            "Item": "Month clusters",
-            "(1) Effective cost per unit turnover (bps)": f"{int(spec1['Month clusters'])}",
-            "(2) Transaction cost rate (bps)": f"{int(spec2['Month clusters'])}",
-        },
-        {
-            "Item": r"$R^2$",
-            "(1) Effective cost per unit turnover (bps)": spec1["R-squared"],
-            "(2) Transaction cost rate (bps)": spec2["R-squared"],
-        },
-    ]
-    return pd.DataFrame(wide_rows)
-
-
-def make_log_scatter(frame: pd.DataFrame) -> None:
-    sample = frame.dropna(
-        subset=[
-            "log10_avg_selected_winsorised_amihud",
-            "effective_cost_per_unit_turnover_bps",
-        ]
-    ).copy()
-    coefs, _, _, _, _ = fit_ols_with_clustered_se(
-        sample,
-        "effective_cost_per_unit_turnover_bps",
-        ["log10_avg_selected_winsorised_amihud"],
-        cluster_col="Date",
-    )
-
-    x_grid = np.linspace(
-        sample["log10_avg_selected_winsorised_amihud"].min(),
-        sample["log10_avg_selected_winsorised_amihud"].max(),
-        200,
-    )
-    y_grid = (
-        coefs["Intercept"]
-        + coefs["log10_avg_selected_winsorised_amihud"] * x_grid
-    )
-
-    fig, ax = plt.subplots(figsize=(7.4, 5.6))
-    sns.scatterplot(
-        data=sample,
-        x="log10_avg_selected_winsorised_amihud",
-        y="effective_cost_per_unit_turnover_bps",
-        hue="model",
-        palette=MODEL_PALETTE,
-        alpha=0.72,
-        s=40,
-        ax=ax,
-    )
-    ax.plot(
-        x_grid,
-        y_grid,
-        color="#1D3557",
-        linewidth=2.1,
-        linestyle="--",
-        label="Pooled log-linear fit",
-    )
-    ax.set_title("Baseline Log Amihud and Effective Cost per Unit Turnover")
-    ax.set_xlabel("log10(Average selected winsorised Amihud)")
-    ax.set_ylabel("Effective cost per unit turnover (bps)")
-    ax.legend(frameon=True, loc="best", title="Model")
-    ax.grid(alpha=0.22)
+    axes[0].set_ylabel("Effective cost (bps per unit turnover)")
     fig.tight_layout()
-    fig.savefig(
-        FIGURES_DIR / "figure_i1_log_amihud_vs_cost_per_turnover.png",
-        dpi=300,
-        bbox_inches="tight",
-    )
+    fig.savefig(FIGURE_I1_PATH, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
-def make_quantile_plot(quantile_summary: pd.DataFrame) -> None:
-    plot_df = quantile_summary.copy()
-    plot_df["se_cost_per_turnover_bps"] = (
-        plot_df["SD of effective cost per unit turnover (bps)"] / np.sqrt(plot_df["Observations"])
+def build_quintile_summary(frame: pd.DataFrame, setting_code: str) -> pd.DataFrame:
+    sample = frame.dropna(subset=["log10_amihud", "effective_cost_bps"]).copy()
+    sample["quintile"] = pd.qcut(
+        sample["log10_amihud"],
+        q=5,
+        labels=[f"Q{i}" for i in range(1, 6)],
+        duplicates="drop",
     )
 
-    fig, ax = plt.subplots(figsize=(7.0, 5.2))
-    bars = ax.bar(
-        plot_df["Log-Amihud quintile"],
-        plot_df["Mean effective cost per unit turnover (bps)"],
-        yerr=1.96 * plot_df["se_cost_per_turnover_bps"],
-        color="#4E79A7",
-        alpha=0.85,
-        capsize=4,
-    )
-    error_heights = 1.96 * plot_df["se_cost_per_turnover_bps"]
-    for bar, value, err in zip(
-        bars,
-        plot_df["Mean effective cost per unit turnover (bps)"],
-        error_heights,
-    ):
-        ax.text(
-            bar.get_x() + bar.get_width() / 2,
-            value + err + 0.2,
-            f"{value:.1f}",
-            ha="center",
-            va="bottom",
-            fontsize=9,
+    rows: list[dict[str, object]] = []
+    for quintile, group in sample.groupby("quintile", observed=False):
+        if group.empty:
+            continue
+        mean_value, lower, upper, n_obs, n_clusters = clustered_mean_ci(
+            group,
+            value_col="effective_cost_bps",
+            cluster_col="Date",
         )
-    ax.set_title("Mean Effective Cost per Unit Turnover by Log-Amihud Quintile")
-    ax.set_xlabel("Pooled log-Amihud quintile")
-    ax.set_ylabel("Mean effective cost per unit turnover (bps)")
-    ax.grid(axis="y", alpha=0.22)
-    fig.tight_layout()
-    fig.savefig(
-        FIGURES_DIR / "figure_i2_log_amihud_quintile_cost_per_turnover.png",
-        dpi=300,
-        bbox_inches="tight",
+        rows.append(
+            {
+                "execution_setting": setting_code,
+                "quintile": str(quintile),
+                "mean_unit_cost": mean_value,
+                "ci_lower": lower,
+                "ci_upper": upper,
+                "N": n_obs,
+                "Months": n_clusters,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def make_figure_i2(f1: pd.DataFrame, f3: pd.DataFrame) -> None:
+    summaries = pd.concat(
+        [
+            build_quintile_summary(f1, "F1"),
+            build_quintile_summary(f3, "F3"),
+        ],
+        ignore_index=True,
     )
+
+    fig, axes = plt.subplots(1, 2, figsize=(13.5, 5.8), sharey=True)
+    for ax, setting_code in zip(axes, ["F1", "F3"]):
+        plot_df = summaries.loc[summaries["execution_setting"] == setting_code].copy()
+        plot_df["quintile"] = pd.Categorical(plot_df["quintile"], categories=[f"Q{i}" for i in range(1, 6)], ordered=True)
+        plot_df = plot_df.sort_values("quintile")
+        color = SETTING_COLORS[setting_code]
+
+        yerr = np.vstack(
+            [
+                plot_df["mean_unit_cost"] - plot_df["ci_lower"],
+                plot_df["ci_upper"] - plot_df["mean_unit_cost"],
+            ]
+        )
+        ax.bar(
+            plot_df["quintile"].astype(str),
+            plot_df["mean_unit_cost"],
+            color=color,
+            alpha=0.85,
+            yerr=yerr,
+            capsize=4,
+            ecolor="#333333",
+        )
+        ax.set_title(SETTING_PANEL_TITLES[setting_code], fontsize=12)
+        ax.set_xlabel("Within-setting Amihud quintile")
+        ax.grid(axis="y", alpha=0.2)
+
+    axes[0].set_ylabel("Mean effective cost (bps per unit turnover)")
+    fig.tight_layout()
+    fig.savefig(FIGURE_I2_PATH, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
 def main() -> None:
     TABLES_DIR.mkdir(parents=True, exist_ok=True)
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    clean_legacy_outputs()
 
-    frame = prepare_frame()
-    regression_summary = build_regression_summary(frame)
-    quantile_summary = build_quantile_summary(frame)
-    retained_summary = build_retained_traded_leg_summary()
-    appendix_regression = build_appendix_ready_regression_table(regression_summary)
+    f1, f3 = build_appendix_i_frames()
+    table_i1 = build_table_i1(f1, f3)
+    table_i2 = build_table_i2(f3)
 
-    regression_summary.to_csv(
-        TABLES_DIR / "table_i1_liquidity_cost_exploratory_regressions.csv",
-        index=False,
-    )
-    quantile_summary.to_csv(
-        TABLES_DIR / "table_i2_log_amihud_cost_per_turnover_quintiles.csv",
-        index=False,
-    )
-    retained_summary.to_csv(
-        TABLES_DIR / "table_i3_retained_traded_leg_linkage_summary.csv",
-        index=False,
-    )
-    appendix_regression.to_csv(
-        TABLES_DIR / "table_i1_baseline_liquidity_cost_linkage_appendix.csv",
-        index=False,
-    )
+    table_i1.to_csv(TABLE_I1_PATH, index=False)
+    table_i2.to_csv(TABLE_I2_PATH, index=False)
+    make_figure_i1(f1, f3)
+    make_figure_i2(f1, f3)
 
-    make_log_scatter(frame)
-    make_quantile_plot(quantile_summary)
-
-    print("Saved outputs/tables/table_i1_liquidity_cost_exploratory_regressions.csv")
-    print("Saved outputs/tables/table_i2_log_amihud_cost_per_turnover_quintiles.csv")
-    print("Saved outputs/tables/table_i3_retained_traded_leg_linkage_summary.csv")
-    print("Saved outputs/tables/table_i1_baseline_liquidity_cost_linkage_appendix.csv")
-    print("Saved outputs/figures/figure_i1_log_amihud_vs_cost_per_turnover.png")
-    print("Saved outputs/figures/figure_i2_log_amihud_quintile_cost_per_turnover.png")
+    print(f"Saved {TABLE_I1_PATH.relative_to(ROOT)}")
+    print(f"Saved {TABLE_I2_PATH.relative_to(ROOT)}")
+    print(f"Saved {FIGURE_I1_PATH.relative_to(ROOT)}")
+    print(f"Saved {FIGURE_I2_PATH.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

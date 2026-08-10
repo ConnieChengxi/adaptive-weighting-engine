@@ -1,6 +1,0 @@
-Log-Amihud quintile,Observations,Mean log10(Amihud),Mean effective cost per unit turnover (bps),Mean transaction cost rate (bps),Mean turnover,SD of effective cost per unit turnover (bps)
-Q1,273,-11.034,14.338,12.682,0.886,5.235
-Q2,272,-10.787,12.704,10.093,0.784,5.45
-Q3,274,-10.576,12.906,10.081,0.788,4.68
-Q4,273,-10.003,19.345,15.834,0.816,13.362
-Q5,270,-8.636,17.359,13.658,0.811,6.123

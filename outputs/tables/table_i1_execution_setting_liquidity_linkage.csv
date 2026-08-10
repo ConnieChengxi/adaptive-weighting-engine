@@ -1,0 +1,3 @@
+Setting,Predictor,N,Months,Spearman rho,Beta,Clustered p,R-squared
+F1,Average selected Amihud,1402,274,0.25,2.322,<0.001,0.063
+F3,Average traded-leg Amihud,366,130,0.159,1.462,0.117,0.031

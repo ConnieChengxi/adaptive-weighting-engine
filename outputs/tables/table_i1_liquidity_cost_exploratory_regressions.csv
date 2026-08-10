@@ -1,4 +1,0 @@
-Outcome,Specification,Observations,Month clusters,R-squared,Intercept (bps),Intercept p-value,Log-Amihud coefficient,Log-Amihud p-value,Turnover coefficient,Turnover p-value
-Effective cost per unit turnover (bps),Log-linear,1362,265,0.069,39.164,<0.001,2.335,<0.001,,
-Transaction cost rate (bps),Log-linear,2058,294,0.013,19.768,<0.001,1.126,0.013,,
-Transaction cost rate (bps),Log-linear + turnover control,2058,294,0.622,12.407,<0.001,1.203,<0.001,15.061,<0.001
