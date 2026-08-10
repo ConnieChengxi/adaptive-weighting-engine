@@ -174,6 +174,7 @@ DISPLAY_COLUMNS = {
     "mean_maximum_factor_weight": "Mean maximum dimension weight",
     "share_of_months_max_weight_gt_0_50": "Share of months with maximum weight > 0.50",
     "share_of_months_max_weight_gt_0_60": "Share of months with maximum weight > 0.60",
+    "share_of_months_at_theoretical_cap": "Share of months at theoretical cap",
     "model_code": "Model code",
     "factor": "Dimension",
     "sample": "Sample",
@@ -1901,17 +1902,9 @@ def make_figure_m3_factor_ic_by_vix_regime_boxplot() -> None:
         width=0.72,
     )
     plt.axhline(0, color="black", linestyle="--", linewidth=1.0)
-    plt.title("Core-Dimension IC Distributions by VIX Regime")
     plt.xlabel("")
     plt.ylabel("Monthly dimension IC")
     plt.legend(title="", frameon=True, loc="upper center", bbox_to_anchor=(0.5, 0.98), ncol=2)
-    plt.figtext(
-        0.01,
-        -0.03,
-        f"Note: High VIX months are defined as months with VIX above the 75th-percentile threshold ({threshold:.2f}).",
-        ha="left",
-        fontsize=10,
-    )
     plt.savefig(FIGURES_DIR / "figure_m3_factor_ic_by_vix_regime_boxplot.png")
     plt.close()
 
@@ -2192,19 +2185,10 @@ def make_figure_a1_full_window_and_test_rebased() -> None:
         line_labels + [h.get_label() for h in regime_handles],
         ncol=4,
         loc="lower center",
-        bbox_to_anchor=(0.5, 0.05),
+        bbox_to_anchor=(0.5, 0.035),
         frameon=False,
     )
-    fig.text(
-        0.02,
-        0.012,
-        "Notes: Panel A reports cumulative net wealth over the full common window. The red box marks the final test period.\n"
-        "Panel B presents the same test segment rebased to 1 at the test start, allowing within-test performance to be compared without pre-test wealth effects.",
-        ha="left",
-        va="bottom",
-        fontsize=10,
-    )
-    fig.subplots_adjust(left=0.09, right=1.000, top=0.92, bottom=0.18)
+    fig.subplots_adjust(left=0.09, right=1.000, top=0.92, bottom=0.17)
     plt.savefig(FIGURES_DIR / "figure_a1_full_window_and_test_rebased.png")
     plt.close()
 
@@ -2232,22 +2216,14 @@ def make_figure_2_rolling_weight_evolution() -> None:
         linewidth=0.0,
         edgecolor="none",
     )
-    ax.set_title("Time-Varying Core Dimension Weights under the Rolling IC Model")
-    ax.set_xlabel("Date")
+    ax.set_xlabel("Formation month")
     ax.set_ylabel("Weight")
     ax.set_ylim(0, 1)
     ax.yaxis.grid(True, alpha=0.18, linewidth=0.8)
     ax.xaxis.grid(False)
     ax.set_axisbelow(True)
-    ax.legend(frameon=False, ncol=1, loc="center left", bbox_to_anchor=(1.0, 0.5), fontsize=9)
-    fig.text(
-        0.01,
-        0.015,
-        "Notes: The figure reports twelve-month rolling averages of monthly dimension weights for visual clarity. Monthly dimension weights sum to one by construction.",
-        ha="left",
-        fontsize=10,
-    )
-    fig.subplots_adjust(left=0.09, right=0.74, top=0.88, bottom=0.17)
+    ax.legend(frameon=False, ncol=3, loc="lower center", bbox_to_anchor=(0.5, 1.02), fontsize=9)
+    fig.subplots_adjust(left=0.09, right=0.98, top=0.83, bottom=0.11)
     plt.savefig(FIGURES_DIR / "figure_2_rolling_ic_weight_evolution.png")
     plt.close()
 
@@ -2262,60 +2238,61 @@ def make_figure_3_xgboost_concentration() -> None:
     weights = weights[(weights["Date"] >= window_start) & (weights["Date"] <= window_end)].copy()
     weight_columns = list(FACTOR_LABELS)
     weights["max_dimension_weight"] = weights[weight_columns].max(axis=1)
+    theoretical_cap = model_weight + baseline_weight / 3.0
     mean_max = weights["max_dimension_weight"].mean()
     pct_gt_50 = (weights["max_dimension_weight"] > 0.50).mean()
     pct_gt_60 = (weights["max_dimension_weight"] > 0.60).mean()
+    pct_at_cap = weights["max_dimension_weight"].sub(theoretical_cap).abs().le(1e-9).mean()
     moderate_reference = 0.50
-    theoretical_cap = model_weight + baseline_weight / 3.0
 
-    plt.figure(figsize=(11, 6.5))
-    plt.plot(weights["Date"], weights["max_dimension_weight"], color=MODEL_COLORS["xgboost_ic"], linewidth=2.2)
-    plt.axhline(moderate_reference, color="#6c757d", linestyle="--", linewidth=1.2)
-    plt.axhline(theoretical_cap, color="#c1121f", linestyle="--", linewidth=1.2)
-    plt.text(
-        weights["Date"].iloc[-1],
-        moderate_reference + 0.005,
-        "",
-        va="bottom",
-        ha="right",
-        fontsize=10,
+    fig, ax = plt.subplots(figsize=(11, 6.2))
+    ax.plot(weights["Date"], weights["max_dimension_weight"], color=MODEL_COLORS["xgboost_ic"], linewidth=1.8)
+    ax.axhline(
+        moderate_reference,
+        color="#6c757d",
+        linestyle="--",
+        linewidth=1.2,
+        label="Majority threshold (0.50)",
     )
-    plt.text(
-        weights["Date"].iloc[-1],
-        theoretical_cap + 0.005,
-        "",
-        va="bottom",
-        ha="right",
-        fontsize=10,
+    ax.axhline(
+        theoretical_cap,
+        color="#c1121f",
+        linestyle="--",
+        linewidth=1.2,
+        label=f"40/60 upper bound ({theoretical_cap:.4f})",
     )
     annotation = (
-        f"Mean maximum dimension weight: {mean_max:.2f}\n"
+        f"Mean maximum weight: {mean_max:.3f}\n"
         f"Months with max weight > 0.50: {pct_gt_50 * 100:.1f}%\n"
-        f"Months with max weight > 0.60: {pct_gt_60 * 100:.1f}%\n"
-        f"Theoretical post-shrinkage cap: {theoretical_cap:.4f}"
+        f"Months at upper bound: {pct_at_cap * 100:.1f}%"
     )
-    plt.text(
+    ax.text(
         0.02,
         0.98,
         annotation,
-        transform=plt.gca().transAxes,
+        transform=ax.transAxes,
         va="top",
         ha="left",
         fontsize=10,
-        bbox={"facecolor": "white", "alpha": 0.85, "edgecolor": "#cccccc"},
+        bbox={"facecolor": "white", "alpha": 0.9, "edgecolor": "#cccccc", "boxstyle": "square,pad=0.25"},
     )
-    plt.title("XGBoost Dimension-Weight Concentration Over Time")
-    plt.xlabel("Date")
-    plt.ylabel("Maximum dimension weight")
-    plt.ylim(0, 1)
-    plt.savefig(FIGURES_DIR / "figure_3_xgboost_weight_concentration.png")
-    plt.close()
+    ax.set_xlabel("Formation month")
+    ax.set_ylabel("Maximum dimension weight")
+    ax.set_ylim(0.28, min(0.78, theoretical_cap + 0.05))
+    ax.yaxis.grid(True, alpha=0.18, linewidth=0.8)
+    ax.xaxis.grid(False)
+    ax.set_axisbelow(True)
+    ax.legend(frameon=False, ncol=2, loc="lower center", bbox_to_anchor=(0.5, 1.02), fontsize=9)
+    fig.subplots_adjust(left=0.09, right=0.98, top=0.84, bottom=0.12)
+    fig.savefig(FIGURES_DIR / "figure_3_xgboost_weight_concentration.png")
+    plt.close(fig)
     pd.DataFrame(
         [
             {
                 "mean_maximum_factor_weight": mean_max,
                 "share_of_months_max_weight_gt_0_50": pct_gt_50,
                 "share_of_months_max_weight_gt_0_60": pct_gt_60,
+                "share_of_months_at_theoretical_cap": pct_at_cap,
             }
         ]
     ).pipe(rename_display_columns).to_csv(TABLES_DIR / "table_xgboost_weight_concentration_diagnostics.csv", index=False)

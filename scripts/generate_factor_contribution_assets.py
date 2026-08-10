@@ -68,6 +68,11 @@ def load_common_window() -> tuple[pd.Timestamp, pd.Timestamp]:
     return pd.Timestamp(summary["common_window_start"]), pd.Timestamp(summary["common_window_end"])
 
 
+def expected_common_window_months() -> int:
+    common_window_start, common_window_end = load_common_window()
+    return len(pd.date_range(start=common_window_start, end=common_window_end, freq="ME"))
+
+
 def load_selection_frame(model_name: str) -> pd.DataFrame:
     frame = pd.read_csv(BACKTEST_DIR / main_result_backtest_name(model_name, "selections"), parse_dates=["Date"])
     if model_name == "fixed_weight":
@@ -78,16 +83,18 @@ def load_selection_frame(model_name: str) -> pd.DataFrame:
 
 def load_weight_history_frame(model_name: str) -> pd.DataFrame:
     common_window_start, common_window_end = load_common_window()
+    expected_months = expected_common_window_months()
     if model_name == "fixed_weight":
         dates = pd.read_csv(BACKTEST_DIR / main_result_backtest_name("fixed_weight", "selections"), usecols=["Date"]).drop_duplicates()
         dates["Date"] = pd.to_datetime(dates["Date"])
         dates = dates[(dates["Date"] >= common_window_start) & (dates["Date"] <= common_window_end)].copy()
         for weight_column, value in STATIC_WEIGHTS.items():
             dates[weight_column] = value
+        assert dates["Date"].nunique() == expected_months, f"{model_name} weight history should contain {expected_months} common-window months"
         return dates
     frame = pd.read_csv(BACKTEST_DIR / main_result_backtest_name(model_name, "weight_history"), parse_dates=["Date"])
     frame = frame[(frame["Date"] >= common_window_start) & (frame["Date"] <= common_window_end)].copy()
-    assert frame["Date"].nunique() == 294, f"{model_name} weight history should contain 294 common-window months"
+    assert frame["Date"].nunique() == expected_months, f"{model_name} weight history should contain {expected_months} common-window months"
     return frame
 
 
