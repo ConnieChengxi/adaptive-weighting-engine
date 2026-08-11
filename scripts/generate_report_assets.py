@@ -1977,17 +1977,9 @@ def make_figure_1_cumulative_wealth() -> None:
             label=MODEL_LABELS[model_key],
         )
 
-    plt.title("Net Cumulative Portfolio Wealth (Test Period)")
     plt.xlabel("Date")
     plt.ylabel("Cumulative wealth of $1")
     plt.legend(frameon=True, loc="center left", bbox_to_anchor=(1.02, 0.5))
-    plt.figtext(
-        0.01,
-        -0.02,
-        f"Note: Portfolio wealth series are net of time-varying transaction costs and shown for the final test period only ({test_start_str} to {test_end_str}).",
-        ha="left",
-        fontsize=10,
-    )
     plt.savefig(FIGURES_DIR / "figure_1_cumulative_portfolio_wealth.png")
     plt.close()
 
@@ -2319,7 +2311,6 @@ def make_figure_4_gross_vs_net_returns() -> None:
 
     plt.figure(figsize=(11, 6.5))
     sns.barplot(data=plot_frame, x="model_code", y="value_pct", hue="return_type", palette=["#4c78a8", "#f58518"])
-    plt.title("Gross and Net Annualised Returns")
     plt.xlabel("Model")
     plt.ylabel("Annualised return (%)")
     plt.legend(
@@ -2332,7 +2323,7 @@ def make_figure_4_gross_vs_net_returns() -> None:
     ax = plt.gca()
     for container in ax.containers:
         ax.bar_label(container, fmt="%.2f", padding=3, fontsize=9)
-    plt.tight_layout(rect=(0, 0, 1, 0.97))
+    plt.tight_layout()
     plt.savefig(FIGURES_DIR / "figure_4_gross_versus_net_returns.png")
     plt.close()
 
@@ -2436,22 +2427,7 @@ def make_figure_7_holding_buffer_sensitivity() -> None:
     axes[1].set_xlabel("Threshold")
     axes[1].set_ylabel("")
 
-    fig.suptitle("Holding-buffer Sensitivity Across Buffer Widths", fontsize=14)
-    note = (
-        "Note: Rows are S1, A1, L1, L2, L3, T1, and T2. Metrics are recomputed on the "
-        "retained final test window. F3 denotes the holding-buffer rule. The retained "
-        "execution rule is a top-3 portfolio with a 2-rank holding buffer, operationalised "
-        "as a Top 6 threshold, while Top 4 and Top 5 are kept as sensitivity checks."
-    )
-    fig.text(
-        0.5,
-        0.02,
-        "\n".join(textwrap.wrap(note, width=120)),
-        ha="center",
-        va="bottom",
-        fontsize=9.5,
-    )
-    fig.tight_layout(rect=(0, 0.08, 1, 0.95))
+    fig.tight_layout()
     plt.savefig(FIGURES_DIR / "figure_7_holding_buffer_sensitivity.png")
     plt.close()
 
@@ -2524,7 +2500,6 @@ def make_figure_9_framework_turnover_comparison() -> None:
         hue="framework_label",
         palette=["#7f8c8d", "#c97b63", "#2a9d8f"],
     )
-    plt.title("Turnover by Turnover-Control Framework", pad=12)
     plt.xlabel("Model")
     plt.ylabel("Turnover (%)")
     plt.legend(
@@ -2536,14 +2511,7 @@ def make_figure_9_framework_turnover_comparison() -> None:
     )
     for container in ax.containers:
         ax.bar_label(container, fmt="%.1f", padding=3, fontsize=8)
-    plt.figtext(
-        0.01,
-        -0.03,
-        "Note: Displayed model codes are S1, A1, L1, L2, L3, T1, and T2. Turnover is recomputed on the retained final test window under F1 (no control), F2 (PTA), and F3 (holding-buffer rule with a top-6 threshold).",
-        ha="left",
-        fontsize=10,
-    )
-    plt.tight_layout(rect=(0, 0, 1, 0.97))
+    plt.tight_layout()
     plt.savefig(FIGURES_DIR / "figure_9_framework_turnover_comparison.png")
     plt.close()
 
