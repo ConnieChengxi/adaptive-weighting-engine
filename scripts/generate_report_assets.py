@@ -1091,7 +1091,6 @@ def make_figure_d2_factor_score_correlation_heatmap() -> None:
 
     plt.figure(figsize=(7.2, 6))
     sns.heatmap(corr, annot=True, cmap="RdBu_r", center=0, fmt=".2f", square=True, cbar_kws={"shrink": 0.8})
-    plt.title("Core Dimension Proxy Correlation")
     plt.xlabel("")
     plt.ylabel("")
     plt.savefig(FIGURES_DIR / "figure_d2_factor_score_correlation_heatmap.png")
@@ -1250,7 +1249,6 @@ def make_figure_dd2_cross_sectional_opportunity_timeseries() -> None:
         for start, end in event_windows:
             ax.axvspan(start, end, color="#adb5bd", alpha=0.18, zorder=0)
         ax.grid(alpha=0.25)
-    axes[0].set_title("Cross-Sectional Opportunity Set Over Time")
     axes[-1].set_xlabel("Date")
     fig.savefig(FIGURES_DIR / "figure_dd2_cross_sectional_opportunity_timeseries.png")
     plt.close(fig)
@@ -1269,7 +1267,6 @@ def make_figure_dd3_market_dependence_bar() -> None:
 
     plt.figure(figsize=(9.5, 6.2))
     ax = sns.barplot(data=plot_frame, x="ticker", y="r_squared_pct", hue="ticker", palette="crest", legend=False)
-    plt.title("Sector ETF Dependence on SPY")
     plt.xlabel("ETF")
     plt.ylabel("Monthly return variance explained by SPY (%)")
     for container in ax.containers:
@@ -1376,7 +1373,7 @@ def make_figure_dd4_regime_dependence_comparison() -> None:
         axes[0].errorbar(offsets, medians, yerr=[lower, upper], fmt="none", ecolor="#444444", capsize=4, lw=1)
     axes[0].set_xticks(x)
     axes[0].set_xticklabels([label.replace(" of returns", "") for label, _ in opportunity_metrics], rotation=0)
-    axes[0].set_title("Opportunity set")
+    axes[0].set_title("(a) Opportunity set")
     axes[0].set_ylabel("Median monthly value (%)")
 
     commonality_x = np.arange(1)
@@ -1396,7 +1393,7 @@ def make_figure_dd4_regime_dependence_comparison() -> None:
         )
     axes[1].set_xticks(commonality_x)
     axes[1].set_xticklabels(["PC1 variance share"])
-    axes[1].set_title("Commonality")
+    axes[1].set_title("(b) Commonality")
     axes[1].set_ylabel("Median monthly share (%)")
 
     for ax in axes:
@@ -1404,17 +1401,8 @@ def make_figure_dd4_regime_dependence_comparison() -> None:
         ax.set_axisbelow(True)
 
     handles = [Patch(facecolor=palette[regime], label=regime) for regime in regimes]
-    fig.legend(handles=handles, labels=regimes, loc="upper center", ncol=2, frameon=True, bbox_to_anchor=(0.5, 0.98))
-    fig.suptitle("Ranking Environment by VIX Regime", y=1.03, fontsize=18)
-    fig.text(
-        0.5,
-        -0.02,
-        "Bars show regime medians; whiskers show interquartile ranges. Commonality is measured as the share of cross-sector return variance explained by the first principal component.",
-        ha="center",
-        va="top",
-        fontsize=10,
-    )
-    fig.tight_layout()
+    fig.legend(handles=handles, labels=regimes, loc="upper center", ncol=2, frameon=True, bbox_to_anchor=(0.5, 1.02))
+    fig.tight_layout(rect=(0, 0, 1, 0.94))
     fig.savefig(FIGURES_DIR / "figure_dd4_regime_dependence_comparison.png", bbox_inches="tight")
     plt.close(fig)
 

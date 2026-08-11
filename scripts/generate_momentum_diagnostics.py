@@ -314,7 +314,6 @@ def make_momentum_regime_bar_chart(summary_df: pd.DataFrame) -> None:
     ax.set_xticklabels(order, rotation=8)
     ax.set_ylabel("Mean monthly IC")
     ax.set_xlabel("Candidate proxy")
-    ax.set_title("Market-Adjusted Momentum Candidate IC by VIX Regime", pad=12)
     ax.legend(frameon=True, loc="upper left")
     ax.grid(axis="y", alpha=0.22)
     ax.margins(x=0.05)

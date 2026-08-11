@@ -430,7 +430,6 @@ def save_figures(ic_frame: pd.DataFrame, summary_frame: pd.DataFrame) -> None:
     ax.axhline(0.0, color="black", linestyle="--", linewidth=1.0)
     ax.set_xticks(x)
     ax.set_xticklabels([display_labels[label] for label in order], rotation=14, ha="right")
-    ax.set_title("Volatility Candidate IC by VIX Regime")
     ax.set_xlabel("")
     ax.set_ylabel("Mean monthly factor IC")
     ax.legend(frameon=True, loc="upper left")
@@ -438,14 +437,7 @@ def save_figures(ic_frame: pd.DataFrame, summary_frame: pd.DataFrame) -> None:
     upper = float(plot_frame["Mean IC"].max())
     lower = float(plot_frame["Mean IC"].min())
     ax.set_ylim(lower - 0.01, upper + 0.02)
-    fig.text(
-        0.01,
-        -0.04,
-        "Candidates are signed as low-uncertainty signals: lower volatility receives a higher rank.",
-        ha="left",
-        fontsize=10,
-    )
-    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.tight_layout()
     fig.savefig(FIGURES_DIR / "figure_vr2_volatility_candidate_ic_by_regime.png", dpi=300, bbox_inches="tight")
     plt.close(fig)
 

@@ -701,7 +701,6 @@ def make_proxy_selection_bar_chart(proxy_selection_df: pd.DataFrame) -> None:
     ax.axvline(1.5, color="#adb5bd", linestyle=":", linewidth=1.2)
     ax.text(0.14, 0.98, "Cross-family screen", transform=ax.transAxes, ha="left", va="top", fontsize=10, color="#495057")
     ax.text(0.77, 0.98, "Amihud family selection", transform=ax.transAxes, ha="left", va="top", fontsize=10, color="#495057")
-    ax.set_title("Liquidity Proxy Selection: Family Screen and Amihud Choice")
     ax.legend(frameon=True, loc="upper left", bbox_to_anchor=(0.0, 0.92))
     ax.grid(axis="y", alpha=0.25)
     upper = float(filtered[["Overall mean IC", "High-VIX mean IC"]].to_numpy().max())
