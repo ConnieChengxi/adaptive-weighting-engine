@@ -2438,11 +2438,21 @@ def make_figure_5_turnover_vs_net_return_scatter() -> None:
     plot_frame["turnover_pct"] = plot_frame["turnover"] * 100.0
     plot_frame["net_return_pct"] = plot_frame["net_return_after_costs"] * 100.0
     plot_frame["model_code"] = plot_frame["model"].map(MODEL_CODE_LABELS)
+    label_offsets = {
+        "S1": (0.70, 0.04),
+        "A1": (0.70, 0.04),
+        "T2": (0.70, 0.04),
+        "L1": (0.70, 0.02),
+        "T1": (0.70, 0.10),
+        "L2": (0.70, -0.02),
+        "L3": (1.15, 0.14),
+    }
 
     plt.figure(figsize=(8.8, 6.5))
     plt.scatter(plot_frame["turnover_pct"], plot_frame["net_return_pct"], color="#2a9d8f", s=85, alpha=0.9)
     for _, row in plot_frame.iterrows():
-        plt.text(row["turnover_pct"] + 0.7, row["net_return_pct"] + 0.04, row["model_code"], fontsize=9)
+        dx, dy = label_offsets.get(row["model_code"], (0.7, 0.04))
+        plt.text(row["turnover_pct"] + dx, row["net_return_pct"] + dy, row["model_code"], fontsize=9)
     plt.title("Turnover and Net Return Trade-off")
     plt.xlabel("Turnover (%)")
     plt.ylabel("Net annualised return (%)")
@@ -2453,7 +2463,7 @@ def make_figure_5_turnover_vs_net_return_scatter() -> None:
         ha="left",
         fontsize=10,
     )
-    plt.savefig(FIGURES_DIR / "figure_5_turnover_vs_net_return_tradeoff.png")
+    plt.savefig(FIGURES_DIR / "figure_5_turnover_vs_net_return_tradeoff.png", dpi=300, bbox_inches="tight")
     plt.close()
 
 
